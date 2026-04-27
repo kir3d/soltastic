@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>soltastic server — Solana × Meshtastic</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="header">
+    <h1>soltastic server</h1>
+    <p>Solana x Meshtastic</p>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="backend-card">
+      <div class="card-title">
+        <div class="dot" id="backend-dot"></div>
+        <span>Solana Backend</span>
+      </div>
+      <div class="info-row" id="backend-info">Backend не проверен</div>
+      <button class="btn btn-sol" id="backend-check-btn">◎ Проверить backend</button>
+    </div>
+
+    <div class="card" id="mesh-card">
+      <div class="card-title">
+        <div class="dot" id="mesh-dot"></div>
+        <span>Meshtastic Node</span>
+      </div>
+      <div class="info-row" id="mesh-info">Нода не подключена</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-mesh" id="mesh-connect-btn">⬡ Подключить BLE</button>
+        <button class="btn btn-outline" id="mesh-disconnect-btn" disabled>Отключить</button>
+        <button class="btn btn-outline" id="mesh-debug-btn">Debug</button>
+      </div>
+    </div>
+
+    <div class="card ping-card">
+      <div class="card-title">
+        <span>📡 Мониторинг</span>
+        <span style="margin-left:auto;color:var(--muted)">slot 7 · ST,init,&lt;wallet&gt;</span>
+      </div>
+      <div class="info-row" id="monitor-info">Жду подключения Meshtastic BLE…</div>
+    </div>
+
+    <div class="card log-section">
+      <div class="card-title">
+        <span>🗒 Лог</span>
+        <button id="clear-log-btn" style="margin-left:auto" class="btn btn-outline">Очистить</button>
+      </div>
+      <div class="log-body" id="log"></div>
+    </div>
+  </div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

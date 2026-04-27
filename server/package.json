@@ -1,0 +1,24 @@
+{
+  "name": "server",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"tsx watch server/index.ts\" \"vite --host 0.0.0.0 --open http://localhost:5173/\"",
+    "server": "tsx server/index.ts",
+    "web": "vite --host 0.0.0.0 --open http://localhost:5173/"
+  },
+  "dependencies": {
+    "@fastify/cors": "latest",
+    "@meshtastic/core": "latest",
+    "@meshtastic/transport-web-bluetooth": "latest",
+    "@solana/web3.js": "1.98.4",
+    "dotenv": "latest",
+    "fastify": "latest"
+  },
+  "devDependencies": {
+    "concurrently": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
