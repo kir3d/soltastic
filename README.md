@@ -6,6 +6,7 @@
 [![Meshtastic](https://img.shields.io/badge/Meshtastic-LoRa-14F195)](#)
 
 **Solana x Meshtastic**
+Solana transactions when mobile internet down.
 
 The project contains two parts:
 
@@ -36,7 +37,7 @@ The high-level flow:
 
 1. The client connects to the Meshtastic BLE node.
 2. The client broadcasts an initialization message.
-3. The server receives the initialization message, creates a long-lived nonce with the permissions assigned to the client's wallet, and sends a response to the client via Meshtastic.
+3. The server receives the initialization message, creates a Durable Nonce with the permissions assigned to the client's wallet, and sends a response to the client via Meshtastic.
 4. The client prepares the transaction, signs it, and sends the metadata and signature.
 5. The server receives the metadata and signature, recreates the transaction, and sends it to the Solana RPC node.
 
@@ -47,11 +48,11 @@ The server never receives the user's private key!
 
 ## Why Solana
 
-**Soltastic** was created for Solana because the network's properties support delayed transactions based on Durable Nonces:
+**Soltastic** was created for Solana because the network's properties support Deferred Execution based on Durable Nonces:
 
-- **no expiration** — delayed transactions do not require Blockhash, allowing transactions to exist for more than 2 minutes (150 blocks).
+- **no expiration** — Deferred Execution do not require Blockhash, allowing transactions to exist for more than 2 minutes (150 blocks).
 - **no double-spending** — an account's Advanced Nonce value changes after use, preventing double-spending.
-- **mobile and wallet ecosystem** — Solana wallets can sign transactions on the client side without revealing private keys to a relayer or delegating assets.
+- **mobile and wallet ecosystem** — Solana wallets can sign transactions on the client side without revealing private keys to a relayer and not delegating assets.
 
 ---
 
