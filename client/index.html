@@ -29,6 +29,21 @@
       <button class="btn btn-sol" id="sol-connect-btn">◎ Подключить</button>
       <button class="btn btn-outline" id="sol-disconnect-btn" disabled>Отключить</button>
     </div>
+    <div class="balance-actions" id="balance-actions" hidden>
+      <button class="btn btn-balance" id="sol-balance-btn">SOL: -</button>
+      <button class="btn btn-balance" id="usdc-balance-btn">USDC: -</button>
+    </div>
+
+    <div class="transfer-form" id="transfer-form" hidden>
+      <div class="transfer-title" id="transfer-title">SEND</div>
+
+      <input id="receiver-input" placeholder="receiver address R">
+      <input id="amount-input" placeholder="amount">
+
+      <button class="btn btn-sol" id="transfer-send-btn">SEND</button>
+
+      <div id="transfer-status" class="info-row" style="display:none"></div>
+    </div>
   </div>
 
   <div class="card">

@@ -4,7 +4,10 @@
   "description": "",
   "main": "soltastic_client.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node soltastic_client.js",
+    "build:meshtastic": "node build-meshtastic.mjs",
+    "build:solana": "node build-solana.mjs",
+    "build": "npm run build:meshtastic && npm run build:solana"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +15,7 @@
   "type": "commonjs",
   "dependencies": {
     "@meshtastic/transport-web-bluetooth": "^0.1.5",
+    "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "jayson": "^2.0.5",
     "rpc-websockets": "^9.3.8"

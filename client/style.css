@@ -189,3 +189,38 @@ body{
 .log-warn{
   color:var(--yellow);
 }
+.balance-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-balance {
+  background: #0d1017;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-balance:hover {
+  border-color: var(--accent2);
+}
+
+.transfer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.transfer-title {
+  font-weight: 800;
+  color: var(--accent2);
+}
+
+.transfer-form input {
+  background: #0d1017;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+}
