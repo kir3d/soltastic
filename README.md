@@ -1,12 +1,14 @@
+<div align="center">
+
+<img src="assets/logo.png" alt="Soltastic" width="100%" />
+
 # Soltastic
+**Solana transactions when mobile internet down.**
 
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
 [![License](https://img.shields.io/badge/license-MIT-blue)](#license)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF)](#why-solana)
 [![Meshtastic](https://img.shields.io/badge/Meshtastic-LoRa-14F195)](#)
-
-**Solana x Meshtastic**
-Solana transactions when mobile internet down.
 
 The project contains two parts:
 
