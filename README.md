@@ -10,6 +10,8 @@
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF)](#why-solana)
 [![Meshtastic](https://img.shields.io/badge/Meshtastic-LoRa-14F195)](#)
 
+</div>
+
 The project contains two parts:
 
 - **Client** - a local browser application, a bridge between the wallet and the Meshtastic BLE node.
