@@ -21,16 +21,17 @@ The project contains two parts:
 
 ## Problem
 
+**Global Mobile Outage Statistics (2025–2026)**
+
+Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
+Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
+Solana users are not protected from the 24,600+ hours of intentional internet outages.
+
 On January 14, 2026, a major nationwide Verizon outage left over 1 million customers without voice, text, or data service, with many devices displaying "SOS" mode. 
 
 <img width="100%" alt="Verizon Outage Map" src="assets/verizon2026.webp" /><div align="center">
 [Verizon Outage Map](https://www.marca.com/en/technology/2026/01/14/69681711ca474146408b4591.html)</div>
 
-**Global Mobile Outage Statistics (2025–2026)**
-Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
-Duration of Outages: Since April 2025, the world has lost more than 24,600 hours of access due to intentional outages.
-Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
-Scope of Impact: In 2025, restrictions affected 2.54 billion people—almost 31% of the world's population.
 
 In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
 
@@ -39,6 +40,7 @@ In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or 
 
 ## Solution
 
+Soltastic lets people or bots send real Solana transactions when mobile internet is down. 
 Using local LoRa-based mesh networks as the last mile, a relay server for transmitting RPC nodes to Solana, and deferred transaction technology.
 
 [World Map](https://meshmap.net/)
