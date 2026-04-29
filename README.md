@@ -39,16 +39,15 @@ In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or 
 
 ## Solution
 
-Users may have a phone and a Meshtastic network, but not access to mobile data, as Meshtastic is actively developing. []World Map][https://meshmap.net/]
+Using local LoRa-based mesh networks as the last mile, a relay server for transmitting RPC nodes to Solana, and deferred transaction technology.
 
-Soltastic uses Meshtastic as the last mile and allows transactions to be sent on the Solana network even without mobile data.
-
+[World Map](https://meshmap.net/)
 
 ---
 
 ## Why Solana
 
-**Soltastic** was created for Solana because the network's properties support Deferred Execution based on Durable Nonces:
+**Soltastic** was created for Solana because the network's properties support Deferred Execution based on **Durable Nonces**:
 
 - **no expiration** — Deferred Execution do not require Blockhash, allowing transactions to exist for more than 2 minutes (150 blocks).
 - **no double-spending** — an account's Advanced Nonce value changes after use, preventing double-spending.
