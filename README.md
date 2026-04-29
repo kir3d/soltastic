@@ -24,7 +24,9 @@ The project contains two parts:
 **Global Mobile Outage Statistics (2025–2026)**
 
 Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
+
 Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
+
 Solana users are not protected from the 24,600+ hours of intentional internet outages.
 
 On January 14, 2026, a major nationwide Verizon outage left over 1 million customers without voice, text, or data service, with many devices displaying "SOS" mode. 
