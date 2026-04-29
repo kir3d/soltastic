@@ -166,28 +166,9 @@ soltastic/
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── assets/
-│   ├── logo.png
-│   ├── client-screenshot.png
-│   └── server-screenshot.png
 ├── docs/
-│   ├── architecture.md
-│   ├── product.md
-│   └── roadmap.md
 ├── client/
-│   ├── index.html
-│   ├── app.js
-│   ├── style.css
-│   ├── meshtastic-wb.js
-│   └── package.json
 └── server/
-    ├── server/
-    │   └── index.ts
-    ├── index.html
-    ├── app.js
-    ├── style.css
-    ├── package.json
-    └── keys/
-        └── server-payer.json.example
 ```
 
 
@@ -322,18 +303,3 @@ Contributions are welcome. Suggested flow:
 
 Please avoid committing real private keys, `.json` and `.env` files, generated build artifacts, or temporary files.
 
----
-
-## License
-
-Apache 2.0 License. See `LICENSE`.
-
----
-
-## Links
-
-- Solana docs: https://solana.com/docs
-- Meshtastic docs: https://meshtastic.org/docs
-- Project demo: `TODO`
-- Pitch deck: `TODO`
-- Video walkthrough: `TODO`
