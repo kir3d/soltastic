@@ -310,24 +310,6 @@ Known dependency note: Solana JS SDK v1 may currently produce moderate `npm audi
 
 ---
 
-## GitHub Topics
-
-Recommended repository topics:
-
-```text
-solana
-meshtastic
-lora
-web3
-durable-nonce
-offline-payments
-hackathon
-colosseum
-superteam
-```
-
----
-
 ## Contributing
 
 Contributions are welcome. Suggested flow:
