@@ -23,20 +23,11 @@ The project contains two parts:
 
 **Global Mobile Outage Statistics (2025–2026)**
 
-Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
-
-Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
-
-Solana users are not protected from the 24,600+ hours of intentional internet outages.
-
-On January 14, 2026, a major nationwide Verizon outage left over 1 million customers without voice, text, or data service, with many devices displaying "SOS" mode. 
-
-<img width="100%" alt="Verizon Outage Map" src="assets/verizon2026.webp" /><div align="center">
-[Verizon Outage Map](https://www.marca.com/en/technology/2026/01/14/69681711ca474146408b4591.html)</div>
-
+Blockchains promise financial freedom, but they still depend on fragile internet access. If your mobile connection goes down, your wallet becomes useless for live transactions.
 
 In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
 
+Soltastic is not just another wallet feature — it is a decentralized last-mile communication layer for blockchain transactions.
 
 ---
 
