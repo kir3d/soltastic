@@ -21,19 +21,15 @@ The project contains two parts:
 
 ## Problem
 
-**Global Mobile Outage Statistics (2025–2026)**
-
 Blockchains promise financial freedom, but they still depend on fragile internet access. If your mobile connection goes down, your wallet becomes useless for live transactions.
 
 In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
-
-Soltastic is not just another wallet feature — it is a decentralized last-mile communication layer for blockchain transactions.
 
 ---
 
 ## Solution
 
-Soltastic lets people or bots send real Solana transactions when mobile internet is down. 
+Soltastic is not just another wallet feature — it is a decentralized last-mile communication layer for blockchain transactions.
 Using local LoRa-based mesh networks as the last mile, a relay server for transmitting RPC nodes to Solana, and deferred transaction technology.
 
 [World Map](https://meshmap.net/)
