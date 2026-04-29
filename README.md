@@ -23,30 +23,22 @@ The project contains two parts:
 
 ## Problem
 
-Solana transactions typically require an active internet connection at the time of signing and sending. In remote areas, disaster zones, field operations, mobile operator outages, festivals, or censorship-resistant environments, users may have a phone and a local radio network, but no internet access.
+**Global Mobile Outage Statistics (2025–2026)**
+Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
+Duration of Outages: Since April 2025, the world has lost more than 24,600 hours of access due to intentional outages.
+Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
+Scope of Impact: In 2025, restrictions affected 2.54 billion people—almost 31% of the world's population.
 
-This creates a "last mile" problem:
-
-- the user can create or confirm the transaction locally;
-- the user cannot reliably communicate with the Solana RPC endpoint;
-- an internet-connected relayer must assist in sending the signed transaction without taking over the management of the funds.
+In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
 
 ---
 
 ## Solution
 
-**Soltastic** uses **Meshtastic** as the offline/low-connectivity transport layer and **Solana Durable Nonces** as the transaction freshness layer.
+Users may have a phone and a Meshtastic network, but not access to mobile data, as Meshtastic is actively developing. []World Map][https://meshmap.net/]
 
-The high-level flow:
+Soltastic uses Meshtastic as the last mile and allows transactions to be sent on the Solana network even without mobile data.
 
-1. The client connects to the Meshtastic BLE node.
-2. The client broadcasts an initialization message.
-3. The server receives the initialization message, creates a Durable Nonce with the permissions assigned to the client's wallet, and sends a response to the client via Meshtastic.
-4. The client prepares the transaction, signs it, and sends the metadata and signature.
-5. The server receives the metadata and signature, recreates the transaction, and sends it to the Solana RPC node.
-
-
-The server never receives the user's private key!
 
 ---
 
@@ -79,53 +71,52 @@ Example:
 
 ## Architecture
 
-```text
-┌──────────────────────────┐
-│ Soltastic Client          │
-│ Browser + Wallet + BLE    │
-└─────────────┬────────────┘
-              │ Meshtastic slot 7
-              │ ST,init,<wallet>
-              ▼
-┌──────────────────────────┐
-│ Meshtastic LoRa Mesh      │
-│ Offline last-mile network │
-└─────────────┬────────────┘
-              │
-              ▼
-┌──────────────────────────┐
-│ Soltastic Server / M-node │
-│ BLE + Fastify + Solana RPC│
-└─────────────┬────────────┘
-              │
-              ▼
-┌──────────────────────────┐
-│ Solana RPC / Devnet       │
-│ Balances + Durable Nonce  │
-└──────────────────────────┘
-```
+<table style="width: 100%">
+  <thead>
+    <tr style="background-color: #1a1a1a">
+      <th width="50px">Step</th>
+      <th width="150px">Actor</th>
+      <th>Action</th>
+      <th width="200px">Transport / Tool</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>01</b></td>
+      <td>📱 <b>Client</b></td>
+      <td>Connects to the local node and establishes a handshake.</td>
+      <td><code>Bluetooth LE</code></td>
+    </tr>
+    <tr>
+      <td><b>02</b></td>
+      <td>📡 <b>Mesh</b></td>
+      <td>Broadcasts <b>Initialization Message</b> across the network to the bridge.</td>
+      <td><code>Meshtastic Protocol</code></td>
+    </tr>
+    <tr>
+      <td><b>03</b></td>
+      <td>🖥️ <b>Server</b></td>
+      <td>Creates a <b>Durable Nonce</b> based on wallet permissions and sends it back.</td>
+      <td><code>Solana Web3.js</code></td>
+    </tr>
+    <tr>
+      <td><b>04</b></td>
+      <td>🔐 <b>Client</b></td>
+      <td>Signs the transaction locally. Metadata and signature are sent to the bridge.</td>
+      <td><code>Ed25519</code></td>
+    </tr>
+    <tr>
+      <td><b>05</b></td>
+      <td>🚀 <b>Solana</b></td>
+      <td>Server recreates the transaction and broadcasts it to the network.</td>
+      <td><code>JSON-RPC</code></td>
+    </tr>
+  </tbody>
+</table>
 
-### Server responsibilities
-
-- Connect to a Meshtastic BLE node.
-- Receive init messages (Meshtastic).
-- Query Solana balances (Internet).
-- Create durable nonce accounts with autorithy for clien's wallet address (Internet).
-- Reply into the mesh channel and send nonce account info for client (Meshtastic).
-- Receive metadata with the signature (Meshtastic).
-- Recreate and check transaction.
-- Send transaction to RPC Node Solana (Internet).
-- Send status to client (Meshtastic).
-
-### Client responsibilities
-
-- Connect to a Solana wallet.
-- Connect to a Meshtastic BLE node.
-- Send init messages to the mesh channel (Meshtastic).
-- Receive server replies Durable Nonce account (Meshtastic).
-- Transaction preparation, signing, and sending metadata with the signature (Meshtastic).
-- Receive status transaction (Meshtastic).
-
+> [!IMPORTANT]
+> **Privacy First:** The server never receives the user's private key. All signing happens locally on the client device.
+    
 ---
 
 ## Protocol
@@ -145,7 +136,7 @@ ST,init,BX64tYBofmJM6PTWXtHjA8p8ij5dnzsqLXbgddaVmkom
 ### Successful response
 
 ```text
-ST,S=<balance_sol>,C=<balance_usdc>,a=<nonce_account>,v=<nonce_value>
+ST,S=<balance_sol>,C=<balance_usdc>,a=<nonce_account>,v=<nonce_value>.p=<fee_address>
 ```
 
 Fields:
@@ -208,6 +199,10 @@ soltastic/
 
 
 ## Quick Start
+
+### 0. Meshtastic settings:
+
+On the meshtastic node, you need to configure channel 7 slot with the private key *** and disconnect the phone from the node so that the computer can connect to the node later.
 
 ### 1. Install dependencies
 
