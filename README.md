@@ -11,13 +11,6 @@
 
 </div>
 
-The project contains two parts:
-
-- **Client** - a local browser application, a bridge between the wallet and the Meshtastic BLE node.
-- **Server** - A relay server application that listens on the Meshtastic channel and communicates with Solana RPC nodes for client requests.
-
-> Current prototype: Client initiates transaction; Server verifies balances and sends Durable Nonce to Client; Client creates and signs transaction; Server transmits to Solana network via RPC node.
-
 ---
 
 ## Problem
@@ -69,6 +62,11 @@ Example:
 ---
 
 ## Architecture
+
+The project contains two parts:
+
+- **Client** - a local browser application, a bridge between the wallet and the Meshtastic BLE node.
+- **Server** - A relay server application that listens on the Meshtastic channel and communicates with Solana RPC nodes for client requests.
 
 <img src="assets/architecture.svg" alt="Architecture" width="100%">
 
