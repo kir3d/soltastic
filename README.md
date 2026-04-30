@@ -1,5 +1,3 @@
-<div align="center">
-
 <img src="assets/logo.png" alt="Soltastic" width="100%" />
 
 # Soltastic
@@ -23,11 +21,7 @@ The project contains two parts:
 
 ## Problem
 
-**Global Mobile Outage Statistics (2025–2026)**
-Record Increase in Outages: In the first quarter of 2026, the number of outages at internet service providers (ISPs) increased by 92% compared to the same period in 2025 (219 vs. 114 incidents).
-Duration of Outages: Since April 2025, the world has lost more than 24,600 hours of access due to intentional outages.
-Economic Damage: In 2025 alone, internet shutdowns (primarily mobile) cost the global economy $20 billion. In India alone, losses amounted to approximately $323 million.
-Scope of Impact: In 2025, restrictions affected 2.54 billion people—almost 31% of the world's population.
+Blockchains promise financial freedom, but they still depend on fragile internet access. If your mobile connection goes down, your wallet becomes useless for live transactions.
 
 In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
 
@@ -35,16 +29,16 @@ In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or 
 
 ## Solution
 
-Users may have a phone and a Meshtastic network, but not access to mobile data, as Meshtastic is actively developing. []World Map][https://meshmap.net/]
+Soltastic is not just another wallet feature — it is a decentralized last-mile communication layer for blockchain transactions.
+Using local LoRa-based mesh networks as the last mile, a relay server for transmitting RPC nodes to Solana, and deferred transaction technology.
 
-Soltastic uses Meshtastic as the last mile and allows transactions to be sent on the Solana network even without mobile data.
-
+[World Map](https://meshmap.net/)
 
 ---
 
 ## Why Solana
 
-**Soltastic** was created for Solana because the network's properties support Deferred Execution based on Durable Nonces:
+**Soltastic** was created for Solana because the network's properties support Deferred Execution based on **Durable Nonces**:
 
 - **no expiration** — Deferred Execution do not require Blockhash, allowing transactions to exist for more than 2 minutes (150 blocks).
 - **no double-spending** — an account's Advanced Nonce value changes after use, preventing double-spending.
@@ -172,28 +166,9 @@ soltastic/
 ├── LICENSE
 ├── CONTRIBUTING.md
 ├── assets/
-│   ├── logo.png
-│   ├── client-screenshot.png
-│   └── server-screenshot.png
 ├── docs/
-│   ├── architecture.md
-│   ├── product.md
-│   └── roadmap.md
 ├── client/
-│   ├── index.html
-│   ├── app.js
-│   ├── style.css
-│   ├── meshtastic-wb.js
-│   └── package.json
 └── server/
-    ├── server/
-    │   └── index.ts
-    ├── index.html
-    ├── app.js
-    ├── style.css
-    ├── package.json
-    └── keys/
-        └── server-payer.json.example
 ```
 
 
@@ -307,24 +282,6 @@ Known dependency note: Solana JS SDK v1 may currently produce moderate `npm audi
 
 ---
 
-## GitHub Topics
-
-Recommended repository topics:
-
-```text
-solana
-meshtastic
-lora
-web3
-durable-nonce
-offline-payments
-hackathon
-colosseum
-superteam
-```
-
----
-
 ## Contributing
 
 Contributions are welcome. Suggested flow:
@@ -346,18 +303,3 @@ Contributions are welcome. Suggested flow:
 
 Please avoid committing real private keys, `.json` and `.env` files, generated build artifacts, or temporary files.
 
----
-
-## License
-
-Apache 2.0 License. See `LICENSE`.
-
----
-
-## Links
-
-- Solana docs: https://solana.com/docs
-- Meshtastic docs: https://meshtastic.org/docs
-- Project demo: `TODO`
-- Pitch deck: `TODO`
-- Video walkthrough: `TODO`
