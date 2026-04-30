@@ -1,3 +1,4 @@
+<div align="center">
 <img src="assets/logo.png" alt="Soltastic" width="100%" />
 
 # Soltastic
@@ -21,9 +22,13 @@ The project contains two parts:
 
 ## Problem
 
-Blockchains promise financial freedom, but they still depend on fragile internet access. If your mobile connection goes down, your wallet becomes useless for live transactions.
+**Mobile connectivity failures create direct financial losses.**
+When internet access fails, users lose the ability to move value, accept payments, execute transactions, or react to urgent financial events.
 
-In remote areas, disaster zones, fieldwork, mobile phone outages, festivals, or censorship-resistant environments, users may experience mobile internet issues more often than we think.
+Sky Business research shows that UK SMEs affected by running out of mobile data lose over **£3,400 per year on average** in missed revenue, with **56%** of affected businesses reporting lost sales, bookings, or opportunities. [Sky Group](https://skygroup.sky/article/fear-of-running-out-of-mobile-data-foro-is-a-real-issue-for-uk-businesses-as-companies-lose-over-3-400-a-year)
+
+In remote areas, disaster zones, fieldwork, crowded festivals, network outages, or censorship-resistant environments, this problem becomes even more important. A user may still have a wallet and a signed Solana transaction, but no internet connection to broadcast it.
+
 
 ---
 
@@ -65,48 +70,7 @@ Example:
 
 ## Architecture
 
-<table style="width: 100%">
-  <thead>
-    <tr style="background-color: #1a1a1a">
-      <th width="50px">Step</th>
-      <th width="150px">Actor</th>
-      <th>Action</th>
-      <th width="200px">Transport / Tool</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><b>01</b></td>
-      <td>📱 <b>Client</b></td>
-      <td>Connects to the local node and establishes a handshake.</td>
-      <td><code>Bluetooth LE</code></td>
-    </tr>
-    <tr>
-      <td><b>02</b></td>
-      <td>📡 <b>Mesh</b></td>
-      <td>Broadcasts <b>Initialization Message</b> across the network to the bridge.</td>
-      <td><code>Meshtastic Protocol</code></td>
-    </tr>
-    <tr>
-      <td><b>03</b></td>
-      <td>🖥️ <b>Server</b></td>
-      <td>Creates a <b>Durable Nonce</b> based on wallet permissions and sends it back.</td>
-      <td><code>Solana Web3.js</code></td>
-    </tr>
-    <tr>
-      <td><b>04</b></td>
-      <td>🔐 <b>Client</b></td>
-      <td>Signs the transaction locally. Metadata and signature are sent to the bridge.</td>
-      <td><code>Ed25519</code></td>
-    </tr>
-    <tr>
-      <td><b>05</b></td>
-      <td>🚀 <b>Solana</b></td>
-      <td>Server recreates the transaction and broadcasts it to the network.</td>
-      <td><code>JSON-RPC</code></td>
-    </tr>
-  </tbody>
-</table>
+<img src="assets/architecture.svg" alt="Architecture" width="100%">
 
 > [!IMPORTANT]
 > **Privacy First:** The server never receives the user's private key. All signing happens locally on the client device.
