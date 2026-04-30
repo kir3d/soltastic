@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-04-29T16:30:22.689Z",
+  "channel": {
+    "id": 7,
+    "name": "soltastic",
+    "psk": "SkhITWNmZVdUM0d5TXlaeA==",
+    "role": 2,
+    "uplinkEnabled": false,
+    "downlinkEnabled": false,
+    "positionPrecision": 32
+  }
+}
