@@ -24,10 +24,10 @@ const INIT_MESSAGE =
   "ST,init,EKmrC9b1PrSZoN1VoNorThLx9yWANKrNoTaqWxboodpA";
 
 const INIT_RESPONSE =
-  "ST,S=0.4,C=0,a=DGwcFGNWE3ZcaFTNmKsW78FqFppgVMtXuvGuBRdnEr9o,v=2LZxnTxPEB3XEMssZ84nsabovNTg54TmxSLRjX5hqZnE,p=64bWK9ejiC9Kxk6jNfTDaaMemXX8Fp5zxuWMeZoyHevm";
+  "ST,S=0.4,C=0,a=EYwmeuYyogd9hWDGpwFws7WuErAhmPqCizsdB7wG6gYJ,v=2rSTDMpEmZYYKtj3ewBxXAsigF7AkN2cdNUrcwSumjNe,p=64bWK9ejiC9Kxk6jNfTDaaMemXX8Fp5zxuWMeZoyHevm";
 
 const TX_MESSAGE =
-  "ST,GEhXXp1VaZSaz2pWz2hZPSDZKPvY4rm9funo1mcEHRue,SOL,0.001,zFPEyecacN7ak29teQ7nH2YaNeTjhdCb8jLC1PoX8VUJSiEcomqXa9RxRvw7Wa92B1ZVas8tgwA1QQiJAy1SLD1";
+  "ST,GEhXXp1VaZSaz2pWz2hZPSDZKPvY4rm9funo1mcEHRue,SOL,0.0001,ia3AJ8YtsVqbkQSumhtYsAHYT6QqQKVTXPgjydeUR84tWZc8774TrbfLntUxF5teLxKmTZCdXMHVwxR4EpAydVv";
 
 const connection = new Connection(RPC_URL, "confirmed");
 

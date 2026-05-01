@@ -592,33 +592,38 @@ function buildTransaction({
   return tx;
 }
 
-function debugUnsignedTransactionMessage(tx) {
+function bytesToBase64(bytes) {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function debugTransactionMessage(label, tx) {
   const messageBytes = tx.serializeMessage();
+  const messageBase64 = bytesToBase64(messageBytes);
 
-  const messageBase64 = btoa(String.fromCharCode(...messageBytes));
-
-  window.slotasticUnsignedMessageBase64 = messageBase64;
-
-  console.log("unsigned message base64 =", messageBase64);
-  console.log("unsigned message bytes length =", messageBytes.length);
-  console.log("instructions count =", tx.instructions.length);
+  console.log(`${label} message base64 =`, messageBase64);
+  console.log(`${label} message bytes length =`, messageBytes.length);
+  console.log(`${label} feePayer =`, tx.feePayer?.toBase58?.());
+  console.log(`${label} recentBlockhash =`, tx.recentBlockhash);
+  console.log(`${label} instructions count =`, tx.instructions.length);
 
   console.log(
-    "program ids =",
+    `${label} program ids =`,
     tx.instructions.map((ix) => ix.programId.toBase58())
   );
 
   console.log(
-    "instruction data hex =",
-    tx.instructions.map((ix) =>
-      Array.from(ix.data)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")
-    )
+    `${label} instruction data hex =`,
+    tx.instructions.map((ix) => bytesToHex(ix.data))
   );
 
   console.log(
-    "instruction keys =",
+    `${label} instruction keys =`,
     tx.instructions.map((ix) =>
       ix.keys.map((k) => ({
         pubkey: k.pubkey.toBase58(),
@@ -653,11 +658,29 @@ async function signAndSendTransfer() {
     const prepared = validateTransferInput();
     const tx = buildTransaction(prepared);
 
-    const unsignedMessageBase64 = debugUnsignedTransactionMessage(tx);
+    const unsignedMessageBase64 = debugTransactionMessage("unsigned", tx);
+    window.slotasticUnsignedMessageBase64 = unsignedMessageBase64;
 
     setTransferStatus("Открой wallet и подпиши транзакцию", "info");
 
     const signedTx = await solanaProvider.signTransaction(tx);
+
+    const signedMessageBase64 = debugTransactionMessage("signed", signedTx);
+    window.slotasticSignedMessageBase64 = signedMessageBase64;
+
+    console.log(
+      "signed message equals unsigned =",
+      signedMessageBase64 === unsignedMessageBase64
+    );
+
+    try {
+      console.log(
+        "signedTx.verifySignatures =",
+        signedTx.verifySignatures(true)
+      );
+    } catch (e) {
+      console.log("signedTx.verifySignatures error =", e);
+    }
 
     const sigEntry = signedTx.signatures.find((entry) =>
       entry.publicKey.equals(prepared.senderPk)
@@ -689,6 +712,15 @@ async function signAndSendTransfer() {
       destination: MESH_BROADCAST_ADDR,
       channel: MESH_CHANNEL_SLOT,
       unsignedMessageBase64,
+      signedMessageBase64,
+      signedMessageEqualsUnsigned: signedMessageBase64 === unsignedMessageBase64,
+      signedTxVerifySignatures: (() => {
+        try {
+          return signedTx.verifySignatures(true);
+        } catch {
+          return null;
+        }
+      })(),
     };
 
     console.log("slotastic signature =", signature);
