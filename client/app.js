@@ -119,6 +119,7 @@ function safeJson(value) {
 
 function isGattBusyError(e) {
   const msg = errorToString(e);
+
   return /GATT operation already in progress|operation already in progress/i.test(
     msg
   );
@@ -261,7 +262,9 @@ function normalizeDecimalInput(value) {
   return String(value).trim().replace(",", ".");
 }
 
-function parseDecimalToUnits(value, decimals) {
+function parseDecimalToUnits(value, decimals, options = {}) {
+  const { allowZero = false } = options;
+
   const s = normalizeDecimalInput(value);
 
   if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(s)) {
@@ -278,7 +281,7 @@ function parseDecimalToUnits(value, decimals) {
   const units =
     BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
 
-  if (units <= 0n) {
+  if (!allowZero && units <= 0n) {
     throw new Error("Сумма должна быть больше нуля");
   }
 
@@ -422,8 +425,14 @@ function renderBalances() {
   }
 
   $("balance-actions").hidden = false;
-  $("sol-balance-btn").textContent = `SOL: ${serverState.solBalanceText}`;
-  $("usdc-balance-btn").textContent = `USDC: ${serverState.usdcBalanceText}`;
+
+  $("sol-balance-btn").textContent = `SOL: ${
+    serverState.solBalanceText ?? "0"
+  }`;
+
+  $("usdc-balance-btn").textContent = `USDC: ${
+    serverState.usdcBalanceText ?? "0"
+  }`;
 }
 
 function selectToken(token) {
@@ -458,7 +467,10 @@ function validateTransferInput() {
 
   const senderPk = parsePublicKey(solanaAddress, "sender");
   const receiverPk = parsePublicKey($("receiver-input").value, "receiver");
-  const noncePk = parsePublicKey(serverState.nonceAccountAddress, "nonce account");
+  const noncePk = parsePublicKey(
+    serverState.nonceAccountAddress,
+    "nonce account"
+  );
   const serverFeePubkey = parsePublicKey(
     serverState.serverFeeAddress,
     "server fee address"
@@ -652,7 +664,10 @@ async function signAndSendTransfer() {
       "info"
     );
 
-    log(`TX reply broadcast replyId=${serverState.serverPacketId}: ${text}`, "info");
+    log(
+      `TX reply broadcast replyId=${serverState.serverPacketId}: ${text}`,
+      "info"
+    );
 
     try {
       await sendTextQueued(
@@ -667,7 +682,10 @@ async function signAndSendTransfer() {
         "ok"
       );
 
-      log(`TX reply отправлен broadcast replyId=${serverState.serverPacketId}: ${text}`, "ok");
+      log(
+        `TX reply отправлен broadcast replyId=${serverState.serverPacketId}: ${text}`,
+        "ok"
+      );
     } catch (e) {
       const msg = errorToString(e);
 
@@ -847,21 +865,30 @@ function handleMeshMessage(packet) {
 
       serverState = {
         ...parsed,
-        solLamports: parseDecimalToUnits(parsed.solBalanceText, 9),
-        usdcUnits: parseDecimalToUnits(parsed.usdcBalanceText, 6),
+        solLamports: parseDecimalToUnits(parsed.solBalanceText, 9, {
+          allowZero: true,
+        }),
+        usdcUnits: parseDecimalToUnits(parsed.usdcBalanceText, 6, {
+          allowZero: true,
+        }),
         serverFrom,
         serverPacketId,
       };
 
-      log(`Reply target: from=${serverFrom ?? "?"}, id=${serverPacketId ?? "?"}`, "info");
+      log(
+        `Reply target: from=${serverFrom ?? "?"}, id=${
+          serverPacketId ?? "?"
+        }`,
+        "info"
+      );
 
       awaitingInitReply = false;
       $("send-btn").disabled = false;
 
       $("sol-info").textContent =
         `${solanaAddress}\n` +
-        `SOL: ${serverState.solBalanceText}\n` +
-        `USDC: ${serverState.usdcBalanceText}\n` +
+        `SOL: ${serverState.solBalanceText ?? "0"}\n` +
+        `USDC: ${serverState.usdcBalanceText ?? "0"}\n` +
         `nonce: ${serverState.nonceAccountAddress}\n` +
         `blockhash: ${serverState.nonceValue}\n` +
         `server fee: ${serverState.serverFeeAddress}`;
@@ -976,11 +1003,17 @@ async function sendInit() {
       log(`Mesh ACK timeout для init: ${msg}`, "err");
 
       if (serverState) {
-        setSendStatus("Init дошёл: ответ сервера уже получен, ACK timeout игнорируем.", "ok");
+        setSendStatus(
+          "Init дошёл: ответ сервера уже получен, ACK timeout игнорируем.",
+          "ok"
+        );
         $("send-btn").disabled = false;
         awaitingInitReply = false;
       } else {
-        setSendStatus("Init отправлен, но ACK timeout.\nВсё ещё ждём ответ сервера...", "info");
+        setSendStatus(
+          "Init отправлен, но ACK timeout.\nВсё ещё ждём ответ сервера...",
+          "info"
+        );
       }
 
       return;

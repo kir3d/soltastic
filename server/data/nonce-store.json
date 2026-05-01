@@ -11,6 +11,8 @@
     "nonceAccount": "DGwcFGNWE3ZcaFTNmKsW78FqFppgVMtXuvGuBRdnEr9o",
     "nonceValue": "2LZxnTxPEB3XEMssZ84nsabovNTg54TmxSLRjX5hqZnE",
     "txSig": "nbXAZPHuUrEdpqqZZgr1z4NXVChU76GvuBNKF5aLfRqVCkXuuu4MXidZqNfT9cLTCFoaHrEdSfTAGE6k5MpgXfs",
-    "createdAt": 1777660972
+    "createdAt": 1777660972,
+    "serverFeeAddress": "64bWK9ejiC9Kxk6jNfTDaaMemXX8Fp5zxuWMeZoyHevm",
+    "fromNode": "3029863607"
   }
 }
