@@ -28,6 +28,12 @@ const SERVICE_FEE_LAMPORTS = BigInt(
   process.env.SERVICE_FEE_LAMPORTS ?? "2000000"
 );
 
+const COMPUTE_UNIT_PRICE_MICRO_LAMPORTS = BigInt(
+  process.env.COMPUTE_UNIT_PRICE_MICRO_LAMPORTS ?? "100000"
+);
+
+const COMPUTE_UNIT_LIMIT = Number(process.env.COMPUTE_UNIT_LIMIT ?? "800000");
+
 const USDC_MINT = new PublicKey(
   process.env.USDC_MINT ?? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 );
@@ -61,6 +67,10 @@ const TOKEN_PROGRAM_ID = new PublicKey(
 
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+);
+
+const COMPUTE_BUDGET_PROGRAM_ID = new PublicKey(
+  "ComputeBudget111111111111111111111111111111"
 );
 
 const app = Fastify({ logger: true });
@@ -184,7 +194,7 @@ function parseDecimalToUnits(value: string, decimals: number): bigint {
   const s = normalizeDecimalInput(value);
 
   if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(s)) {
-    throw new Error("Invalid amount format");
+    throw new Error(`Invalid amount format: ${value}`);
   }
 
   const [whole, fractionRaw = ""] = s.split(".");
@@ -194,6 +204,7 @@ function parseDecimalToUnits(value: string, decimals: number): bigint {
   }
 
   const fraction = fractionRaw.padEnd(decimals, "0");
+
   const units =
     BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
 
@@ -202,6 +213,48 @@ function parseDecimalToUnits(value: string, decimals: number): bigint {
   }
 
   return units;
+}
+
+function bigintToSafeNumber(value: bigint, label: string): number {
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(`${label} is too large for safe JS number`);
+  }
+
+  return Number(value);
+}
+
+function base58Decode(value: string): Uint8Array {
+  const alphabet =
+    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  let x = 0n;
+
+  for (const ch of value) {
+    const idx = alphabet.indexOf(ch);
+
+    if (idx < 0) {
+      throw new Error(`Invalid base58 character: ${ch}`);
+    }
+
+    x = x * 58n + BigInt(idx);
+  }
+
+  const bytes: number[] = [];
+
+  while (x > 0n) {
+    bytes.unshift(Number(x & 0xffn));
+    x >>= 8n;
+  }
+
+  for (const ch of value) {
+    if (ch === "1") {
+      bytes.unshift(0);
+    } else {
+      break;
+    }
+  }
+
+  return Uint8Array.from(bytes);
 }
 
 function getAssociatedTokenAddressLocal(
@@ -224,66 +277,51 @@ function createTokenTransferInstruction(
 ): TransactionInstruction {
   const data = Buffer.alloc(9);
 
-  // SPL Token instruction enum:
-  // 3 = Transfer
+  // SPL Token instruction enum: 3 = Transfer
   data[0] = 3;
   data.writeBigUInt64LE(amount, 1);
 
   return new TransactionInstruction({
     programId: TOKEN_PROGRAM_ID,
     keys: [
-      {
-        pubkey: source,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: destination,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: owner,
-        isSigner: true,
-        isWritable: false,
-      },
+      { pubkey: source, isSigner: false, isWritable: true },
+      { pubkey: destination, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: true, isWritable: false },
     ],
     data,
   });
 }
 
-function base58Decode(value: string): Uint8Array {
-  const alphabet =
-    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function createComputeUnitPriceInstruction(
+  microLamports: bigint
+): TransactionInstruction {
+  const data = Buffer.alloc(9);
 
-  let x = 0n;
+  // ComputeBudgetInstruction::SetComputeUnitPrice
+  // tag = 3, u64 little-endian
+  data[0] = 3;
+  data.writeBigUInt64LE(microLamports, 1);
 
-  for (const ch of value) {
-    const idx = alphabet.indexOf(ch);
+  return new TransactionInstruction({
+    programId: COMPUTE_BUDGET_PROGRAM_ID,
+    keys: [],
+    data,
+  });
+}
 
-    if (idx < 0) {
-      throw new Error("Invalid base58 character");
-    }
+function createComputeUnitLimitInstruction(units: number): TransactionInstruction {
+  const data = Buffer.alloc(5);
 
-    x = x * 58n + BigInt(idx);
-  }
+  // ComputeBudgetInstruction::SetComputeUnitLimit
+  // tag = 2, u32 little-endian
+  data[0] = 2;
+  data.writeUInt32LE(units, 1);
 
-  const bytes: number[] = [];
-
-  while (x > 0n) {
-    bytes.unshift(Number(x & 0xffn));
-    x >>= 8n;
-  }
-
-  for (const ch of value) {
-    if (ch === "1") {
-      bytes.unshift(0);
-    } else {
-      break;
-    }
-  }
-
-  return Uint8Array.from(bytes);
+  return new TransactionInstruction({
+    programId: COMPUTE_BUDGET_PROGRAM_ID,
+    keys: [],
+    data,
+  });
 }
 
 async function getUsdcBalance(owner: PublicKey): Promise<string> {
@@ -356,39 +394,6 @@ async function createDurableNonceForWallet(
   };
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForConfirmedTx(txSig: string) {
-  const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    const res = await connection.getSignatureStatuses([txSig], {
-      searchTransactionHistory: true,
-    });
-
-    const status = res.value[0];
-
-    if (status?.err) {
-      throw new TxFailedOnChainError(
-        `Transaction failed: ${JSON.stringify(status.err)}`
-      );
-    }
-
-    if (
-      status?.confirmationStatus === "confirmed" ||
-      status?.confirmationStatus === "finalized"
-    ) {
-      return status;
-    }
-
-    await sleep(CONFIRM_POLL_MS);
-  }
-
-  throw new TxConfirmTimeoutError(`Transaction confirmation timeout: ${txSig}`);
-}
-
 function buildRestoredTransaction(params: {
   senderPk: PublicKey;
   receiverPk: PublicKey;
@@ -413,6 +418,7 @@ function buildRestoredTransaction(params: {
     recentBlockhash: nonceValue,
   });
 
+  // 1. Durable nonce transaction MUST start with nonceAdvance.
   tx.add(
     SystemProgram.nonceAdvance({
       noncePubkey: noncePk,
@@ -420,12 +426,17 @@ function buildRestoredTransaction(params: {
     })
   );
 
+  // 2-3. Same ComputeBudget instructions that client signs.
+  tx.add(createComputeUnitPriceInstruction(COMPUTE_UNIT_PRICE_MICRO_LAMPORTS));
+  tx.add(createComputeUnitLimitInstruction(COMPUTE_UNIT_LIMIT));
+
+  // 4. Main transfer.
   if (token === "SOL") {
     tx.add(
       SystemProgram.transfer({
         fromPubkey: senderPk,
         toPubkey: receiverPk,
-        lamports: amountUnits,
+        lamports: bigintToSafeNumber(amountUnits, "amount lamports"),
       })
     );
   } else if (token === "USDC") {
@@ -444,14 +455,19 @@ function buildRestoredTransaction(params: {
     throw new Error(`Unsupported token: ${token}`);
   }
 
+  // 5. Service fee to server.
   tx.add(
     SystemProgram.transfer({
       fromPubkey: senderPk,
       toPubkey: serverFeePubkey,
-      lamports: SERVICE_FEE_LAMPORTS,
+      lamports: bigintToSafeNumber(
+        SERVICE_FEE_LAMPORTS,
+        "service fee lamports"
+      ),
     })
   );
 
+  // 6. Transfer nonce authority to server fee pubkey.
   tx.add(
     SystemProgram.nonceAuthorize({
       noncePubkey: noncePk,
@@ -461,6 +477,48 @@ function buildRestoredTransaction(params: {
   );
 
   return tx;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForConfirmedTx(txSig: string) {
+  const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const res = await connection.getSignatureStatuses([txSig], {
+      searchTransactionHistory: true,
+    });
+
+    const status = res.value[0];
+
+    app.log.info(
+      {
+        txSig,
+        confirmationStatus: status?.confirmationStatus ?? null,
+        err: status?.err ?? null,
+      },
+      "tx confirmation poll"
+    );
+
+    if (status?.err) {
+      throw new TxFailedOnChainError(
+        `Transaction failed: ${JSON.stringify(status.err)}`
+      );
+    }
+
+    if (
+      status?.confirmationStatus === "confirmed" ||
+      status?.confirmationStatus === "finalized"
+    ) {
+      return status;
+    }
+
+    await sleep(CONFIRM_POLL_MS);
+  }
+
+  throw new TxConfirmTimeoutError(`Transaction confirmation timeout: ${txSig}`);
 }
 
 app.get("/api/status", async () => {
@@ -477,6 +535,8 @@ app.get("/api/status", async () => {
     usdcMint: USDC_MINT.toBase58(),
     minSol: MIN_SOL,
     serviceFeeLamports: SERVICE_FEE_LAMPORTS.toString(),
+    computeUnitPriceMicroLamports: COMPUTE_UNIT_PRICE_MICRO_LAMPORTS.toString(),
+    computeUnitLimit: COMPUTE_UNIT_LIMIT,
   };
 });
 
@@ -511,6 +571,15 @@ app.post<{
     saveMeshWalletLink(fromNode, walletBase58, packetId);
   }
 
+  req.log.info(
+    {
+      wallet: walletBase58,
+      fromNode,
+      packetId,
+    },
+    "init request"
+  );
+
   try {
     const balances = await getBalances(wallet);
 
@@ -543,10 +612,24 @@ app.post<{
         db[walletBase58] = existing;
         saveNonceDb(db);
 
+        const response = `ST,S=${balances.sol},C=${balances.usdc},a=${existing.nonceAccount},v=${existing.nonceValue},p=${existing.serverFeeAddress}`;
+
+        req.log.info(
+          {
+            wallet: walletBase58,
+            reused: true,
+            nonceAccount: existing.nonceAccount,
+            nonceValue: existing.nonceValue,
+            serverFeeAddress: existing.serverFeeAddress,
+            response,
+          },
+          "init response"
+        );
+
         return {
           ok: true,
           reused: true,
-          response: `ST,S=${balances.sol},C=${balances.usdc},a=${existing.nonceAccount},v=${existing.nonceValue},p=${existing.serverFeeAddress}`,
+          response,
           sol: balances.sol,
           usdc: balances.usdc,
           nonceAccount: existing.nonceAccount,
@@ -565,10 +648,25 @@ app.post<{
     db[walletBase58] = rec;
     saveNonceDb(db);
 
+    const response = `ST,S=${balances.sol},C=${balances.usdc},a=${rec.nonceAccount},v=${rec.nonceValue},p=${rec.serverFeeAddress ?? serverFeeAddress}`;
+
+    req.log.info(
+      {
+        wallet: walletBase58,
+        reused: false,
+        nonceAccount: rec.nonceAccount,
+        nonceValue: rec.nonceValue,
+        serverFeeAddress: rec.serverFeeAddress ?? serverFeeAddress,
+        txSig: rec.txSig,
+        response,
+      },
+      "init response"
+    );
+
     return {
       ok: true,
       reused: false,
-      response: `ST,S=${balances.sol},C=${balances.usdc},a=${rec.nonceAccount},v=${rec.nonceValue},p=${rec.serverFeeAddress ?? serverFeeAddress}`,
+      response,
       sol: balances.sol,
       usdc: balances.usdc,
       nonceAccount: rec.nonceAccount,
@@ -590,12 +688,23 @@ app.post<{
 app.post<{
   Body: SubmitBody;
 }>("/api/submit", async (req, reply) => {
-  try {
-    const fromNode =
-      req.body.fromNode !== undefined && req.body.fromNode !== null
-        ? String(req.body.fromNode)
-        : null;
+  const fromNode =
+    req.body.fromNode !== undefined && req.body.fromNode !== null
+      ? String(req.body.fromNode)
+      : null;
 
+  req.log.info(
+    {
+      fromNode,
+      receiver: req.body.receiver,
+      token: req.body.token,
+      amount: req.body.amount,
+      signature: req.body.signature,
+    },
+    "submit request"
+  );
+
+  try {
     if (!fromNode) {
       return reply.code(400).send({
         ok: false,
@@ -641,8 +750,23 @@ app.post<{
     }
 
     const amountUnits = parseDecimalToUnits(req.body.amount, decimals);
-
     const currentNonce = await readNonceValue(noncePk);
+
+    req.log.info(
+      {
+        fromNode,
+        senderWallet,
+        receiver: receiverPk.toBase58(),
+        token,
+        amount: req.body.amount,
+        amountUnits: amountUnits.toString(),
+        nonceAccount: rec.nonceAccount,
+        storedNonceValue: rec.nonceValue,
+        currentNonce,
+        serverFeeAddress: rec.serverFeeAddress ?? serverFeeAddress,
+      },
+      "submit restore input"
+    );
 
     if (!currentNonce || currentNonce !== rec.nonceValue) {
       return reply.code(400).send({
@@ -661,6 +785,16 @@ app.post<{
       token,
       amountUnits,
     });
+
+    req.log.info(
+      {
+        feePayer: tx.feePayer?.toBase58(),
+        recentBlockhash: tx.recentBlockhash,
+        instructionCount: tx.instructions.length,
+        programIds: tx.instructions.map((ix) => ix.programId.toBase58()),
+      },
+      "transaction restored"
+    );
 
     let sigBytes: Uint8Array;
 
@@ -684,6 +818,24 @@ app.post<{
 
     tx.addSignature(senderPk, Buffer.from(sigBytes));
 
+    const verifyOk = tx.verifySignatures(true);
+
+    req.log.info(
+      {
+        verifyOk,
+        signatureBytes: sigBytes.length,
+      },
+      "client signature verification"
+    );
+
+    if (!verifyOk) {
+      return reply.code(400).send({
+        ok: false,
+        response: "ST,e=6",
+        error: "Client signature verification failed",
+      });
+    }
+
     let rawTx: Buffer;
 
     try {
@@ -699,21 +851,45 @@ app.post<{
       });
     }
 
+    req.log.info(
+      {
+        rawTxBytes: rawTx.length,
+      },
+      "raw transaction serialized"
+    );
+
     const txSig = await connection.sendRawTransaction(rawTx, {
       skipPreflight: false,
       preflightCommitment: "confirmed",
     });
+
+    req.log.info(
+      {
+        txSig,
+      },
+      "transaction sent to rpc"
+    );
 
     await waitForConfirmedTx(txSig);
 
     delete nonceDb[senderWallet];
     saveNonceDb(nonceDb);
 
+    const response = `ST,${txSig}`;
+
+    req.log.info(
+      {
+        txSig,
+        response,
+      },
+      "transaction confirmed"
+    );
+
     return {
       ok: true,
       confirmed: true,
       txSig,
-      response: `ST,${txSig}`,
+      response,
     };
   } catch (err: any) {
     req.log.error(err);

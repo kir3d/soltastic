@@ -38,13 +38,13 @@ const INIT_MESSAGE =
 const INIT_RESPONSE =
   "ST,S=0.4,C=0,a=EYwmeuYyogd9hWDGpwFws7WuErAhmPqCizsdB7wG6gYJ,v=2rSTDMpEmZYYKtj3ewBxXAsigF7AkN2cdNUrcwSumjNe,p=64bWK9ejiC9Kxk6jNfTDaaMemXX8Fp5zxuWMeZoyHevm";
 
-// Сообщение клиента после подписи
+// Новое сообщение клиента после подписи
 const TX_MESSAGE =
-  "ST,GEhXXp1VaZSaz2pWz2hZPSDZKPvY4rm9funo1mcEHRue,SOL,0.0001,ia3AJ8YtsVqbkQSumhtYsAHYT6QqQKVTXPgjydeUR84tWZc8774TrbfLntUxF5teLxKmTZCdXMHVwxR4EpAydVv";
+  "ST,GEhXXp1VaZSaz2pWz2hZPSDZKPvY4rm9funo1mcEHRue,SOL,0.0001,pyCqzsqT7DbnQtHiMXnEoK6XtYC49kPSoVmJcxkaR1Kvpep66iZ7qxUi7CTmike5Mi4nt6jxwimWz14W8XWEg8U";
 
 // signed message base64 из браузера после Phantom signTransaction()
 const EXPECTED_SIGNED_MESSAGE_BASE64 =
-  "AQADB8X3GDUputLVS7vrzTBNQ5Xi4cC8KruGhGJYZkHZXklPSzYxQ1RqrPbx8AgpcZ4tYAoOkvIaLjzp6F8hYSfenaLJVt0XKRFYSWx0NzPtD69zsmE8zVew7lXMXN3WZJCAi+JhrYGwEC5tvXcKdF8RX4AjL14Ow3w17DNbqBi2Rvt9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADBkZv5SEXMv/srbpyw5vnvIzlu8X3EmssQ5s6QAAAAAan1RcZLFaO4IqEX3PSl4jPA1wxRbIas0TYBi6pQAAAG4Xs2L/HhKXPk7uTHFQzySFegVvG9eM1f9lSZiYYQ48GBQAJA6CGAQAAAAAABQAFAgA1DAAEAwIGAAQEAAAABAIAAwwCAAAAoIYBAAAAAAAEAgABDAIAAACAhB4AAAAAAAQCAgAkBwAAAEs2MUNUaqz28fAIKXGeLWAKDpLyGi486ehfIWEn3p2i";
+  "AQADB8X3GDUputLVS7vrzTBNQ5Xi4cC8KruGhGJYZkHZXklPSzYxQ1RqrPbx8AgpcZ4tYAoOkvIaLjzp6F8hYSfenaLJVt0XKRFYSWx0NzPtD69zsmE8zVew7lXMXN3WZJCAi+JhrYGwEC5tvXcKdF8RX4AjL14Ow3w17DNbqBi2Rvt9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADBkZv5SEXMv/srbpyw5vnvIzlu8X3EmssQ5s6QAAAAAan1RcZLFaO4IqEX3PSl4jPA1wxRbIas0TYBi6pQAAAG4Xs2L/HhKXPk7uTHFQzySFegVvG9eM1f9lSZiYYQ48GBAMCBgAEBAAAAAUACQOghgEAAAAAAAUABQIANQwABAIAAwwCAAAAoIYBAAAAAAAEAgABDAIAAACAhB4AAAAAAAQCAgAkBwAAAEs2MUNUaqz28fAIKXGeLWAKDpLyGi486ehfIWEn3p2i";
 
 const connection = new Connection(RPC_URL, "confirmed");
 
@@ -237,19 +237,20 @@ function buildRestoredTransaction({
     recentBlockhash: nonceValue,
   });
 
-  console.log("1. add ComputeBudget setComputeUnitPrice");
-  tx.add(createComputeUnitPriceInstruction(COMPUTE_UNIT_PRICE_MICRO_LAMPORTS));
-
-  console.log("2. add ComputeBudget setComputeUnitLimit");
-  tx.add(createComputeUnitLimitInstruction(COMPUTE_UNIT_LIMIT));
-
-  console.log("3. add nonceAdvance");
+  // Durable nonce transaction MUST start with nonceAdvance.
+  console.log("1. add nonceAdvance");
   tx.add(
     SystemProgram.nonceAdvance({
       noncePubkey: noncePk,
       authorizedPubkey: senderPk,
     })
   );
+
+  console.log("2. add ComputeBudget setComputeUnitPrice");
+  tx.add(createComputeUnitPriceInstruction(COMPUTE_UNIT_PRICE_MICRO_LAMPORTS));
+
+  console.log("3. add ComputeBudget setComputeUnitLimit");
+  tx.add(createComputeUnitLimitInstruction(COMPUTE_UNIT_LIMIT));
 
   if (token === "SOL") {
     console.log("4. add SOL transfer sender -> receiver");
