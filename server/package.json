@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"tsx watch server/index.ts\" \"vite --host 0.0.0.0 --open http://localhost:5173/\"",
-    "server": "tsx server/index.ts",
+    "server": "concurrently \"tsx server/index.ts\" \"vite --host 0.0.0.0 --open http://localhost:5173/\"",
+    "api": "tsx server/index.ts",
     "web": "vite --host 0.0.0.0 --open http://localhost:5173/"
   },
   "dependencies": {

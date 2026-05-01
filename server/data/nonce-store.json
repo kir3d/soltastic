@@ -1,18 +1,1 @@
-{
-  "BX64tYBofmJM6PTWXtHjA8p8ij5dnzsqLXbgddaVmkom": {
-    "wallet": "BX64tYBofmJM6PTWXtHjA8p8ij5dnzsqLXbgddaVmkom",
-    "nonceAccount": "GBaiLdo36MkYfcrASC4ispbCGjDuKAJPnXDCCNv1kzyo",
-    "nonceValue": "AxEQhxUf4Z9GSu6KGbSktrUCRwSFtKYUjeYJXuR87jfK",
-    "txSig": "4ANQUAz9rNxJZPeaykm9zJeo76mKVRnm9P4hqyHasNSK14EGeEs2duX8EL5nHk5owd3gZxsa9VRJAhiRJfQ7s3Pp",
-    "createdAt": 1777274178
-  },
-  "EKmrC9b1PrSZoN1VoNorThLx9yWANKrNoTaqWxboodpA": {
-    "wallet": "EKmrC9b1PrSZoN1VoNorThLx9yWANKrNoTaqWxboodpA",
-    "nonceAccount": "EYwmeuYyogd9hWDGpwFws7WuErAhmPqCizsdB7wG6gYJ",
-    "nonceValue": "2rSTDMpEmZYYKtj3ewBxXAsigF7AkN2cdNUrcwSumjNe",
-    "txSig": "3Gch3okGvkwCE67TnFJxoME8kBtFxrvbd3rNuxZZQRgAqz3tBecE5ZrQdHjcE8NS9jDgjrgBxdbgdJwDun7o9H3s",
-    "serverFeeAddress": "64bWK9ejiC9Kxk6jNfTDaaMemXX8Fp5zxuWMeZoyHevm",
-    "createdAt": 1777665829,
-    "fromNode": "3029863607"
-  }
-}
+{}

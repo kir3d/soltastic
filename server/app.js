@@ -68,6 +68,7 @@ function setMonitor(text) {
 
 function normalizeNodeNum(v) {
   if (v === undefined || v === null || v === "") return null;
+
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -163,6 +164,22 @@ function parseInit(text) {
   return m?.[1] ?? null;
 }
 
+function parseTx(text) {
+  const m =
+    /^ST,([1-9A-HJ-NP-Za-km-z]{32,44}),(SOL|USDC),([0-9]+(?:[.,][0-9]+)?),([1-9A-HJ-NP-Za-km-z]{80,100})$/.exec(
+      text.trim()
+    );
+
+  if (!m) return null;
+
+  return {
+    receiver: m[1],
+    token: m[2],
+    amount: m[3].replace(",", "."),
+    signature: m[4],
+  };
+}
+
 function isDuplicate(fromNode, text) {
   const key = `${fromNode ?? "?"}:${text}`;
   const t = nowMs();
@@ -181,6 +198,7 @@ function isDuplicate(fromNode, text) {
 
 async function loadMeshtasticModule() {
   const mod = await import("./meshtastic-wb.js");
+
   meshModule = mod;
 
   log(
@@ -212,6 +230,31 @@ function canSendText() {
   );
 }
 
+async function postJson(url, body) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const err = new Error(
+      `HTTP ${res.status}: ${data ? compactJson(data) : res.statusText}`
+    );
+
+    err.status = res.status;
+    err.data = data;
+
+    throw err;
+  }
+
+  return data;
+}
+
 async function checkBackend() {
   try {
     const res = await fetch(`${API_BASE}/api/status`);
@@ -221,9 +264,12 @@ async function checkBackend() {
     $("backend-info").textContent =
       `OK\n` +
       `RPC: ${data.rpc}\n` +
-      `Payer: ${data.payer}\n` +
-      `Payer SOL: ${data.payerSol}\n` +
-      `USDC mint: ${data.usdcMint}`;
+      `Server fee address: ${data.serverFeeAddress}\n` +
+      `Server SOL: ${data.serverSol}\n` +
+      `USDC mint: ${data.usdcMint}\n` +
+      `Service fee lamports: ${data.serviceFeeLamports}\n` +
+      `Compute unit price: ${data.computeUnitPriceMicroLamports}\n` +
+      `Compute unit limit: ${data.computeUnitLimit}`;
 
     log("✓ Backend доступен", "ok");
   } catch (e) {
@@ -235,22 +281,27 @@ async function checkBackend() {
 
 async function connectMesh() {
   const btn = $("mesh-connect-btn");
+
   btn.disabled = true;
   btn.textContent = "⏳ Подключение…";
 
   if (!window.isSecureContext) {
     log("Web Bluetooth работает только через https:// или http://localhost.", "err");
+
     btn.disabled = false;
     btn.textContent = "⬡ Подключить BLE";
     $("mesh-dot").className = "dot err";
+
     return;
   }
 
   if (!navigator.bluetooth) {
     log("navigator.bluetooth недоступен. Используй Chrome/Edge.", "err");
+
     btn.disabled = false;
     btn.textContent = "⬡ Подключить BLE";
     $("mesh-dot").className = "dot err";
+
     return;
   }
 
@@ -282,6 +333,7 @@ async function connectMesh() {
     }
 
     meshDevice = new MeshDevice(transport);
+
     attachMeshEvents(meshDevice);
 
     const devInfo =
@@ -294,14 +346,15 @@ async function connectMesh() {
     $("mesh-dot").className = "dot on";
     $("mesh-disconnect-btn").disabled = false;
     $("mesh-connect-btn").textContent = "Подключено";
+
     $("mesh-info").textContent =
       `BLE: ${devInfo}\n` +
       `TX/RX channel slot: ${MESH_CHANNEL_SLOT}\n` +
       `Отправка: ${canSendText() ? "доступна" : "не найдена"}`;
 
     setMonitor(
-      `Мониторю Meshtastic slot ${MESH_CHANNEL_SLOT}. ` +
-        `Жду сообщения вида ST,init,<wallet_address>`
+      `Мониторю Meshtastic slot ${MESH_CHANNEL_SLOT}.\n` +
+        `Жду сообщения вида ST,init,<wallet> или ST,<receiver>,<token>,<amount>,<signature>`
     );
 
     log("✓ Transport подключён. MeshDevice создан.", "ok");
@@ -316,9 +369,11 @@ async function connectMesh() {
     }
   } catch (e) {
     log(`Ошибка подключения Meshtastic: ${errText(e)}`, "err");
+
     btn.disabled = false;
     btn.textContent = "⬡ Подключить BLE";
     $("mesh-dot").className = "dot err";
+
     setMonitor(`Ошибка BLE: ${errText(e)}`);
   }
 }
@@ -379,8 +434,9 @@ async function handlePossibleMessage(pkt, source) {
   }
 
   const wallet = parseInit(text);
+  const tx = parseTx(text);
 
-  if (!wallet) {
+  if (!wallet && !tx) {
     log(`RX ${source}: ${text}`, "info");
     return;
   }
@@ -389,51 +445,134 @@ async function handlePossibleMessage(pkt, source) {
     return;
   }
 
-  log(
-    `RX ST init from=${fromNode ?? "?"}, channel=${channel ?? "?"}, packetId=${
-      packetId ?? "-"
-    }: ${wallet}`,
-    "ok"
-  );
+  if (wallet) {
+    log(
+      `RX ST init from=${fromNode ?? "?"}, channel=${
+        channel ?? "?"
+      }, packetId=${packetId ?? "-"}: ${wallet}`,
+      "ok"
+    );
 
-  setMonitor(
-    `Получен init от node=${fromNode ?? "?"}\n` +
-      `Wallet: ${wallet}\n` +
-      `Проверяю баланс SOL/USDC…`
-  );
+    setMonitor(
+      `Получен init от node=${fromNode ?? "?"}\n` +
+        `Wallet: ${wallet}\n` +
+        `Проверяю баланс SOL/USDC…`
+    );
 
-  try {
-    const res = await fetch(`${API_BASE}/api/init`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      const data = await postJson(`${API_BASE}/api/init`, {
         wallet,
         fromNode,
         packetId,
-      }),
-    });
+      });
 
-    const data = await res.json();
+      if (!data?.response) {
+        throw new Error(`Backend returned no response: ${compactJson(data)}`);
+      }
 
-    if (!data?.response) {
-      throw new Error(`Backend returned no response: ${compactJson(data)}`);
+      log(`Backend response: ${data.response}`, "ok");
+
+      setMonitor(
+        `Backend ответил:\n${data.response}\n` +
+          `Отправляю reply в Meshtastic slot ${MESH_CHANNEL_SLOT}…`
+      );
+
+      await sendReply(data.response, packetId);
+
+      setMonitor(`Ответ поставлен в очередь:\n${data.response}`);
+    } catch (e) {
+      const errResponse = e?.data?.response ?? "ST,S=0,C=0,e=2";
+
+      log(`Ошибка обработки ST init: ${errText(e)}`, "err");
+      setMonitor(`Ошибка обработки init:\n${errText(e)}\nОтправляю ${errResponse}`);
+
+      try {
+        await sendReply(errResponse, packetId);
+      } catch (sendErr) {
+        log(`Не удалось отправить ошибку init клиенту: ${errText(sendErr)}`, "err");
+      }
     }
 
-    log(`Backend response: ${data.response}`, "ok");
+    return;
+  }
 
-    setMonitor(
-      `Backend ответил:\n${data.response}\n` +
-        `Отправляю reply в Meshtastic slot ${MESH_CHANNEL_SLOT}…`
+  if (tx) {
+    log(
+      `RX ST tx from=${fromNode ?? "?"}, channel=${
+        channel ?? "?"
+      }, packetId=${packetId ?? "-"}: receiver=${tx.receiver}, token=${
+        tx.token
+      }, amount=${tx.amount}`,
+      "ok"
     );
 
-    await sendReply(data.response, packetId);
+    log("1/3 recreate transaction: отправляю данные в backend /api/submit", "info");
 
-    setMonitor(`Ответ поставлен в очередь:\n${data.response}`);
-  } catch (e) {
-    log(`Ошибка обработки ST init: ${errText(e)}`, "err");
-    setMonitor(`Ошибка обработки:\n${errText(e)}`);
+    log(
+      `TX metadata: fromNode=${fromNode ?? "?"}, receiver=${tx.receiver}, token=${
+        tx.token
+      }, amount=${tx.amount}, signatureLen=${tx.signature.length}`,
+      "info"
+    );
+
+    setMonitor(
+      `Получена подпись от node=${fromNode ?? "?"}\n` +
+        `1/3 recreate transaction…\n` +
+        `receiver=${tx.receiver}\n` +
+        `token=${tx.token}, amount=${tx.amount}`
+    );
+
+    try {
+      log("2/3 check signature: backend восстановит tx и проверит подпись", "info");
+      log("3/3 send to RPC node: backend отправит tx и дождётся confirmed", "info");
+
+      const data = await postJson(`${API_BASE}/api/submit`, {
+        fromNode,
+        receiver: tx.receiver,
+        token: tx.token,
+        amount: tx.amount,
+        signature: tx.signature,
+      });
+
+      if (!data?.response) {
+        throw new Error(`Backend returned no response: ${compactJson(data)}`);
+      }
+
+      if (data.ok) {
+        log(`Backend submit confirmed: ${data.response}`, "ok");
+
+        setMonitor(
+          `Транзакция confirmed:\n${data.txSig ?? data.response}\n` +
+            `Отправляю клиенту:\n${data.response}`
+        );
+      } else {
+        log(`Backend submit error: ${compactJson(data)}`, "err");
+        setMonitor(`Backend submit error:\n${compactJson(data)}`);
+      }
+
+      await sendReply(data.response, packetId);
+
+      log(
+        `TX hash/error отправлен клиенту: ${data.response}`,
+        data.ok ? "ok" : "err"
+      );
+    } catch (e) {
+      const errResponse = e?.data?.response ?? "ST,e=3";
+
+      log(`Ошибка обработки ST tx: ${errText(e)}`, "err");
+
+      setMonitor(
+        `Ошибка обработки tx:\n${errText(e)}\nОтправляю ${errResponse}`
+      );
+
+      try {
+        await sendReply(errResponse, packetId);
+      } catch (sendErr) {
+        log(`Не удалось отправить ошибку клиенту: ${errText(sendErr)}`, "err");
+      }
+    }
+
+    return;
   }
 }
 
@@ -477,15 +616,12 @@ async function sendReply(text, replyId) {
     );
   } else if (typeof meshDevice?.sendTextMessage === "function") {
     sendPromise = meshDevice.sendTextMessage(text);
-
     log(`TX reply через MeshDevice.sendTextMessage(): "${text}"`, "info");
   } else if (typeof transport?.send === "function") {
     sendPromise = transport.send(text);
-
     log(`TX reply через transport.send(): "${text}"`, "info");
   } else if (typeof transport?.write === "function") {
     sendPromise = transport.write(new TextEncoder().encode(text));
-
     log(`TX reply через transport.write(): "${text}"`, "info");
   } else {
     throw new Error("Нет доступного метода отправки.");
@@ -524,7 +660,6 @@ async function disconnectMesh() {
     $("mesh-connect-btn").textContent = "⬡ Подключить BLE";
 
     setMonitor("Жду подключения Meshtastic BLE…");
-
     log("Meshtastic отключён вручную.", "warn");
   }
 }
@@ -542,9 +677,13 @@ async function debugServices() {
   }
 
   if (meshDevice) {
-    log(`MeshDevice keys: ${Object.keys(meshDevice).join(", ") || "(none)"}`, "info");
+    log(
+      `MeshDevice keys: ${Object.keys(meshDevice).join(", ") || "(none)"}`,
+      "info"
+    );
 
     const proto = Object.getPrototypeOf(meshDevice);
+
     log(
       `MeshDevice proto methods: ${Object.getOwnPropertyNames(proto).join(", ")}`,
       "info"
