@@ -14,9 +14,11 @@ const SERVICE_FEE_SOL = "0.002";
 const SERVICE_FEE_LAMPORTS = 2_000_000n;
 const TX_FEE_RESERVE_LAMPORTS = 10_000n;
 
+const TX_REPLY_TIMEOUT_MS = 180_000;
+
 // devnet USDC mint.
 // Для mainnet заменить на:
-// EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+// EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGkZwyTDt1v
 const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
 let solanaAddress = null;
@@ -24,18 +26,16 @@ let solanaProvider = null;
 
 let transport = null;
 let meshDevice = null;
-
 let meshConnecting = false;
 let meshConnected = false;
 let meshSubscribed = false;
-
 let meshSendQueue = Promise.resolve();
 
 let awaitingInitReply = false;
 let awaitingTxStatus = false;
+let txReplyTimer = null;
 
 let selectedToken = null;
-
 const localEchoTexts = new Set();
 
 let serverState = null;
@@ -47,7 +47,7 @@ serverState = {
   usdcUnits,
   nonceAccountAddress,
   nonceValue,
-  payer,
+  serverFeeAddress,
   serverFrom,
   serverPacketId
 }
@@ -71,10 +71,9 @@ function escapeHtml(s) {
 function log(msg, type = "info") {
   const el = $("log");
   const t = new Date().toLocaleTimeString();
-
   const div = document.createElement("div");
-  div.innerHTML = `<span class="log-time">${escapeHtml(t)}</span> <span class="log-${type}">${escapeHtml(msg)}</span>`;
-
+  div.innerHTML = `${escapeHtml(t)} ${escapeHtml(msg)}`;
+  div.className = `log-${type}`;
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -120,7 +119,9 @@ function safeJson(value) {
 
 function isGattBusyError(e) {
   const msg = errorToString(e);
-  return /GATT operation already in progress|operation already in progress/i.test(msg);
+  return /GATT operation already in progress|operation already in progress/i.test(
+    msg
+  );
 }
 
 function isMeshPacketTimeoutError(e) {
@@ -243,6 +244,8 @@ async function sendTextWithRetry(text, destination, channel, replyId) {
       throw e;
     }
   }
+
+  throw new Error("Mesh send failed");
 }
 
 function sendTextQueued(text, destination, channel, replyId) {
@@ -251,7 +254,6 @@ function sendTextQueued(text, destination, channel, replyId) {
     .then(() => sendTextWithRetry(text, destination, channel, replyId));
 
   meshSendQueue = job.catch(() => {});
-
   return job;
 }
 
@@ -273,10 +275,8 @@ function parseDecimalToUnits(value, decimals) {
   }
 
   const fraction = fractionRaw.padEnd(decimals, "0");
-
   const units =
-    BigInt(whole) * 10n ** BigInt(decimals) +
-    BigInt(fraction || "0");
+    BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
 
   if (units <= 0n) {
     throw new Error("Сумма должна быть больше нуля");
@@ -294,7 +294,9 @@ function parsePublicKey(value, label) {
 }
 
 function base58Encode(bytes) {
-  const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  const alphabet =
+    "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
   let x = 0n;
 
   for (const b of bytes) {
@@ -310,8 +312,11 @@ function base58Encode(bytes) {
   }
 
   for (const b of bytes) {
-    if (b === 0) out = "1" + out;
-    else break;
+    if (b === 0) {
+      out = "1" + out;
+    } else {
+      break;
+    }
   }
 
   return out || "1";
@@ -329,7 +334,6 @@ function parseServerReply(text) {
 
     const key = part.slice(0, idx);
     const value = part.slice(idx + 1);
-
     fields[key] = value;
   }
 
@@ -350,8 +354,64 @@ function parseServerReply(text) {
     usdcBalanceText: fields.C,
     nonceAccountAddress: fields.a,
     nonceValue: fields.v,
-    payer: fields.p,
+    serverFeeAddress: fields.p,
   };
+}
+
+function parseTxHashReply(text) {
+  if (!text.startsWith("ST,")) return null;
+
+  const txHash = text.slice(3).trim();
+
+  // Не путаем с init-ответами вида ST,S=...,C=...
+  if (!txHash || txHash.includes(",") || txHash.includes("=")) {
+    return null;
+  }
+
+  // Solana tx signature / tx hash в base58 обычно около 87-88 символов.
+  if (!/^[1-9A-HJ-NP-Za-km-z]{80,100}$/.test(txHash)) {
+    return null;
+  }
+
+  return txHash;
+}
+
+function txErrorText(code) {
+  const map = {
+    "3": "Ошибка отправки транзакции сервером",
+    "4": "Сервер не знает mesh sender, нужен init",
+    "5": "Nonce не найден или устарел",
+    "6": "Неверная подпись клиента",
+    "7": "Транзакция не подтверждена или timeout",
+    "8": "Транзакция упала on-chain",
+  };
+
+  return map[String(code)] ?? `Ошибка сервера e=${code}`;
+}
+
+function clearTxReplyWait() {
+  if (txReplyTimer) {
+    clearTimeout(txReplyTimer);
+    txReplyTimer = null;
+  }
+}
+
+function startTxReplyWait() {
+  clearTxReplyWait();
+
+  txReplyTimer = setTimeout(() => {
+    if (!awaitingTxStatus) return;
+
+    awaitingTxStatus = false;
+    $("transfer-send-btn").disabled = false;
+
+    setTransferStatus(
+      "Timeout: сервер не прислал подтверждённый tx_hash",
+      "err"
+    );
+
+    log("Timeout ожидания confirmed TX от сервера", "err");
+  }, TX_REPLY_TIMEOUT_MS);
 }
 
 function renderBalances() {
@@ -399,14 +459,18 @@ function validateTransferInput() {
   const senderPk = parsePublicKey(solanaAddress, "sender");
   const receiverPk = parsePublicKey($("receiver-input").value, "receiver");
   const noncePk = parsePublicKey(serverState.nonceAccountAddress, "nonce account");
-  const payerPk = parsePublicKey(serverState.payer, "payer");
+  const serverFeePubkey = parsePublicKey(
+    serverState.serverFeeAddress,
+    "server fee address"
+  );
 
   const amountText = normalizeDecimalInput($("amount-input").value);
   const decimals = selectedToken === "SOL" ? 9 : 6;
   const amountUnits = parseDecimalToUnits(amountText, decimals);
 
   if (selectedToken === "SOL") {
-    const required = amountUnits + SERVICE_FEE_LAMPORTS + TX_FEE_RESERVE_LAMPORTS;
+    const required =
+      amountUnits + SERVICE_FEE_LAMPORTS + TX_FEE_RESERVE_LAMPORTS;
 
     if (required > serverState.solLamports) {
       throw new Error(
@@ -423,7 +487,9 @@ function validateTransferInput() {
     const requiredSol = SERVICE_FEE_LAMPORTS + TX_FEE_RESERVE_LAMPORTS;
 
     if (requiredSol > serverState.solLamports) {
-      throw new Error(`Недостаточно SOL для оплаты ${SERVICE_FEE_SOL} SOL service fee`);
+      throw new Error(
+        `Недостаточно SOL для оплаты ${SERVICE_FEE_SOL} SOL service fee`
+      );
     }
   }
 
@@ -431,13 +497,19 @@ function validateTransferInput() {
     senderPk,
     receiverPk,
     noncePk,
-    payerPk,
+    serverFeePubkey,
     amountText,
     amountUnits,
   };
 }
 
-function buildTransaction({ senderPk, receiverPk, noncePk, payerPk, amountUnits }) {
+function buildTransaction({
+  senderPk,
+  receiverPk,
+  noncePk,
+  serverFeePubkey,
+  amountUnits,
+}) {
   const tx = new Transaction({
     feePayer: senderPk,
     recentBlockhash: serverState.nonceValue,
@@ -492,7 +564,7 @@ function buildTransaction({ senderPk, receiverPk, noncePk, payerPk, amountUnits 
   tx.add(
     SystemProgram.transfer({
       fromPubkey: senderPk,
-      toPubkey: payerPk,
+      toPubkey: serverFeePubkey,
       lamports: SERVICE_FEE_LAMPORTS,
     })
   );
@@ -501,7 +573,7 @@ function buildTransaction({ senderPk, receiverPk, noncePk, payerPk, amountUnits 
     SystemProgram.nonceAuthorize({
       noncePubkey: noncePk,
       authorizedPubkey: senderPk,
-      newAuthorizedPubkey: payerPk,
+      newAuthorizedPubkey: serverFeePubkey,
     })
   );
 
@@ -522,7 +594,8 @@ async function signAndSendTransfer() {
 
     if (serverState.serverFrom == null || serverState.serverPacketId == null) {
       throw new Error(
-        "Не могу отправить reply: у серверного RX-пакета нет from/id. Смотри строку RX packet debug в логе."
+        "Не могу отправить reply: у серверного RX-пакета нет from/id.\n" +
+          "Смотри строку RX packet debug в логе."
       );
     }
 
@@ -557,7 +630,7 @@ async function signAndSendTransfer() {
       sender: solanaAddress,
       nonceAccount: serverState.nonceAccountAddress,
       nonceValue: serverState.nonceValue,
-      payer: serverState.payer,
+      serverFeeAddress: serverState.serverFeeAddress,
       serverFrom: serverState.serverFrom,
       serverPacketId: serverState.serverPacketId,
       destination: MESH_BROADCAST_ADDR,
@@ -571,10 +644,14 @@ async function signAndSendTransfer() {
     console.log("slotastic debug =", window.slotasticDebug);
 
     rememberLocalEcho(text);
-
     awaitingTxStatus = true;
+    startTxReplyWait();
 
-    setTransferStatus("Broadcast reply отправляется. Ждём ответ сервера в slot 7...", "info");
+    setTransferStatus(
+      "Подпись отправляется серверу.\nЖдём confirmed tx_hash в slot 7...",
+      "info"
+    );
+
     log(`TX reply broadcast replyId=${serverState.serverPacketId}: ${text}`, "info");
 
     try {
@@ -585,26 +662,37 @@ async function signAndSendTransfer() {
         serverState.serverPacketId
       );
 
-      setTransferStatus("Подпись отправлена broadcast reply. Ждём ответ сервера в slot 7...", "ok");
+      setTransferStatus(
+        "Подпись отправлена.\nЖдём confirmed tx_hash от сервера...",
+        "ok"
+      );
+
       log(`TX reply отправлен broadcast replyId=${serverState.serverPacketId}: ${text}`, "ok");
     } catch (e) {
       const msg = errorToString(e);
 
       if (isMeshPacketTimeoutError(e)) {
         setTransferStatus(
-          "Reply отправлен, но Mesh ACK timeout. Ждём ответ сервера в slot 7...",
+          "Reply отправлен, но Mesh ACK timeout.\nЖдём confirmed tx_hash от сервера...",
           "info"
         );
+
         log(`Mesh ACK timeout для TX reply: ${msg}`, "err");
         return;
       }
 
       awaitingTxStatus = false;
+      clearTxReplyWait();
       $("transfer-send-btn").disabled = false;
+
       throw e;
     }
   } catch (e) {
     const msg = errorToString(e);
+
+    awaitingTxStatus = false;
+    clearTxReplyWait();
+
     $("transfer-send-btn").disabled = false;
     setTransferStatus(msg, "err");
     log(msg, "err");
@@ -650,19 +738,19 @@ function disconnectSolana() {
   selectedToken = null;
   awaitingInitReply = false;
   awaitingTxStatus = false;
+  clearTxReplyWait();
 
   $("sol-info").textContent = "Кошелёк не подключён";
   $("sol-dot").className = "dot";
   $("send-btn").disabled = true;
   $("sol-disconnect-btn").disabled = true;
-  $("msg-input").value = "ST,init,<wallet>";
+  $("msg-input").value = "ST,init,";
 
   if ($("send-status")) {
     $("send-status").style.display = "none";
   }
 
   renderBalances();
-
   log("Wallet отключён", "info");
 }
 
@@ -684,22 +772,49 @@ function handleMeshMessage(packet) {
   log(`RX slot ${packet.channel ?? "?"}: ${text}`, "info");
 
   if (awaitingTxStatus && text.startsWith("ST,")) {
+    const txHash = parseTxHashReply(text);
+
+    if (txHash) {
+      awaitingTxStatus = false;
+      clearTxReplyWait();
+
+      $("transfer-send-btn").disabled = false;
+
+      setTransferStatus(`Транзакция подтверждена:\n${txHash}`, "ok");
+      log(`Confirmed TX: ${txHash}`, "ok");
+
+      window.slotasticLastTxHash = txHash;
+
+      return;
+    }
+
     const parsedTx = parseServerReply(text);
 
     if (parsedTx?.error) {
       awaitingTxStatus = false;
+      clearTxReplyWait();
+
       $("transfer-send-btn").disabled = false;
-      setTransferStatus(
-        `Ошибка сервера e=${parsedTx.error}; SOL=${parsedTx.solBalanceText}, USDC=${parsedTx.usdcBalanceText}`,
-        "err"
-      );
+
+      const msg = txErrorText(parsedTx.error);
+
+      setTransferStatus(msg, "err");
+      log(msg, "err");
+
       return;
     }
 
+    // Если это init-ответ вида ST,S=...,C=...,a=...,v=...,p=...
+    // не считаем его TX-ответом, пусть обработается ниже.
     if (!parsedTx) {
       awaitingTxStatus = false;
+      clearTxReplyWait();
+
       $("transfer-send-btn").disabled = false;
-      setTransferStatus(`Ответ сервера: ${text}`, "ok");
+
+      setTransferStatus(`Непонятный ответ сервера:\n${text}`, "err");
+      log(`Unexpected TX reply: ${text}`, "err");
+
       return;
     }
   }
@@ -721,7 +836,7 @@ function handleMeshMessage(packet) {
   if (parsed) {
     try {
       parsePublicKey(parsed.nonceAccountAddress, "nonce account");
-      parsePublicKey(parsed.payer, "payer");
+      parsePublicKey(parsed.serverFeeAddress, "server fee address");
 
       const serverFrom = getPacketFrom(packet);
       const serverPacketId = getPacketId(packet);
@@ -749,11 +864,11 @@ function handleMeshMessage(packet) {
         `USDC: ${serverState.usdcBalanceText}\n` +
         `nonce: ${serverState.nonceAccountAddress}\n` +
         `blockhash: ${serverState.nonceValue}\n` +
-        `payer: ${serverState.payer}`;
+        `server fee: ${serverState.serverFeeAddress}`;
 
       renderBalances();
 
-      setSendStatus("Ответ сервера получен. Балансы доступны в Wallet.", "ok");
+      setSendStatus("Ответ сервера получен.\nБалансы доступны в Wallet.", "ok");
       log("Баланс и durable nonce получены", "ok");
     } catch (e) {
       const msg = errorToString(e);
@@ -776,6 +891,7 @@ async function connectMesh() {
 
   try {
     const mod = await import("./meshtastic-wb.js");
+
     const Transport = mod.TransportWebBluetooth;
     const MeshDevice = mod.MeshDevice;
 
@@ -842,21 +958,16 @@ async function sendInit() {
   rememberLocalEcho(text);
 
   $("msg-input").value = text;
-
   awaitingInitReply = true;
   $("send-btn").disabled = true;
 
-  setSendStatus("Init отправляется. Ждём ответ сервера в slot 7...", "info");
+  setSendStatus("Init отправляется.\nЖдём ответ сервера в slot 7...", "info");
   log(`TX init: ${text}`, "info");
 
   try {
-    await sendTextQueued(
-      text,
-      MESH_BROADCAST_ADDR,
-      MESH_CHANNEL_SLOT
-    );
+    await sendTextQueued(text, MESH_BROADCAST_ADDR, MESH_CHANNEL_SLOT);
 
-    setSendStatus("Init отправлен. Ждём ответ сервера в slot 7...", "info");
+    setSendStatus("Init отправлен.\nЖдём ответ сервера в slot 7...", "info");
     log(`Отправлено: ${text}`, "ok");
   } catch (e) {
     const msg = errorToString(e);
@@ -869,7 +980,7 @@ async function sendInit() {
         $("send-btn").disabled = false;
         awaitingInitReply = false;
       } else {
-        setSendStatus("Init отправлен, но ACK timeout. Всё ещё ждём ответ сервера...", "info");
+        setSendStatus("Init отправлен, но ACK timeout.\nВсё ещё ждём ответ сервера...", "info");
       }
 
       return;
