@@ -366,12 +366,10 @@ function parseTxHashReply(text) {
 
   const txHash = text.slice(3).trim();
 
-  // Не путаем с init-ответами вида ST,S=...,C=...
   if (!txHash || txHash.includes(",") || txHash.includes("=")) {
     return null;
   }
 
-  // Solana tx signature / tx hash в base58 обычно около 87-88 символов.
   if (!/^[1-9A-HJ-NP-Za-km-z]{80,100}$/.test(txHash)) {
     return null;
   }
@@ -467,10 +465,12 @@ function validateTransferInput() {
 
   const senderPk = parsePublicKey(solanaAddress, "sender");
   const receiverPk = parsePublicKey($("receiver-input").value, "receiver");
+
   const noncePk = parsePublicKey(
     serverState.nonceAccountAddress,
     "nonce account"
   );
+
   const serverFeePubkey = parsePublicKey(
     serverState.serverFeeAddress,
     "server fee address"
@@ -592,6 +592,45 @@ function buildTransaction({
   return tx;
 }
 
+function debugUnsignedTransactionMessage(tx) {
+  const messageBytes = tx.serializeMessage();
+
+  const messageBase64 = btoa(String.fromCharCode(...messageBytes));
+
+  window.slotasticUnsignedMessageBase64 = messageBase64;
+
+  console.log("unsigned message base64 =", messageBase64);
+  console.log("unsigned message bytes length =", messageBytes.length);
+  console.log("instructions count =", tx.instructions.length);
+
+  console.log(
+    "program ids =",
+    tx.instructions.map((ix) => ix.programId.toBase58())
+  );
+
+  console.log(
+    "instruction data hex =",
+    tx.instructions.map((ix) =>
+      Array.from(ix.data)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+    )
+  );
+
+  console.log(
+    "instruction keys =",
+    tx.instructions.map((ix) =>
+      ix.keys.map((k) => ({
+        pubkey: k.pubkey.toBase58(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      }))
+    )
+  );
+
+  return messageBase64;
+}
+
 async function signAndSendTransfer() {
   try {
     $("transfer-send-btn").disabled = true;
@@ -613,6 +652,8 @@ async function signAndSendTransfer() {
 
     const prepared = validateTransferInput();
     const tx = buildTransaction(prepared);
+
+    const unsignedMessageBase64 = debugUnsignedTransactionMessage(tx);
 
     setTransferStatus("Открой wallet и подпиши транзакцию", "info");
 
@@ -647,6 +688,7 @@ async function signAndSendTransfer() {
       serverPacketId: serverState.serverPacketId,
       destination: MESH_BROADCAST_ADDR,
       channel: MESH_CHANNEL_SLOT,
+      unsignedMessageBase64,
     };
 
     console.log("slotastic signature =", signature);
@@ -822,8 +864,6 @@ function handleMeshMessage(packet) {
       return;
     }
 
-    // Если это init-ответ вида ST,S=...,C=...,a=...,v=...,p=...
-    // не считаем его TX-ответом, пусть обработается ниже.
     if (!parsedTx) {
       awaitingTxStatus = false;
       clearTxReplyWait();
