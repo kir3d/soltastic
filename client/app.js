@@ -14,6 +14,13 @@ const SERVICE_FEE_SOL = "0.002";
 const SERVICE_FEE_LAMPORTS = 2_000_000n;
 const TX_FEE_RESERVE_LAMPORTS = 10_000n;
 
+const COMPUTE_BUDGET_PROGRAM_ID = new PublicKey(
+  "ComputeBudget111111111111111111111111111111"
+);
+
+const COMPUTE_UNIT_PRICE_MICRO_LAMPORTS = 100_000n;
+const COMPUTE_UNIT_LIMIT = 800_000;
+
 const TX_REPLY_TIMEOUT_MS = 180_000;
 
 // devnet USDC mint.
@@ -515,6 +522,38 @@ function validateTransferInput() {
   };
 }
 
+function createComputeUnitPriceInstruction(microLamports) {
+  const data = new Uint8Array(9);
+  const view = new DataView(data.buffer);
+
+  // ComputeBudgetInstruction::SetComputeUnitPrice
+  // tag = 3, u64 little-endian
+  data[0] = 3;
+  view.setBigUint64(1, BigInt(microLamports), true);
+
+  return {
+    keys: [],
+    programId: COMPUTE_BUDGET_PROGRAM_ID,
+    data,
+  };
+}
+
+function createComputeUnitLimitInstruction(units) {
+  const data = new Uint8Array(5);
+  const view = new DataView(data.buffer);
+
+  // ComputeBudgetInstruction::SetComputeUnitLimit
+  // tag = 2, u32 little-endian
+  data[0] = 2;
+  view.setUint32(1, Number(units), true);
+
+  return {
+    keys: [],
+    programId: COMPUTE_BUDGET_PROGRAM_ID,
+    data,
+  };
+}
+
 function buildTransaction({
   senderPk,
   receiverPk,
@@ -527,12 +566,23 @@ function buildTransaction({
     recentBlockhash: serverState.nonceValue,
   });
 
+  // ВАЖНО:
+  // Для durable nonce первой инструкцией ОБЯЗАТЕЛЬНО должен быть nonceAdvance.
+  // Иначе RPC будет считать nonceValue обычным recentBlockhash и вернёт BlockhashNotFound.
   tx.add(
     SystemProgram.nonceAdvance({
       noncePubkey: noncePk,
       authorizedPubkey: senderPk,
     })
   );
+
+  // Phantom может сам добавить ComputeBudget-инструкции.
+  // Чтобы message был детерминированным, добавляем их сами после nonceAdvance.
+  tx.add(
+    createComputeUnitPriceInstruction(COMPUTE_UNIT_PRICE_MICRO_LAMPORTS)
+  );
+
+  tx.add(createComputeUnitLimitInstruction(COMPUTE_UNIT_LIMIT));
 
   if (selectedToken === "SOL") {
     tx.add(
