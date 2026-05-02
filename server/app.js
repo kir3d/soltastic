@@ -271,10 +271,10 @@ async function checkBackend() {
       `Compute unit price: ${data.computeUnitPriceMicroLamports}\n` +
       `Compute unit limit: ${data.computeUnitLimit}`;
 
-    log("✓ Backend доступен", "ok");
+    log("✓ Backend is available", "ok");
   } catch (e) {
     $("backend-dot").className = "dot err";
-    $("backend-info").textContent = `Backend недоступен: ${errText(e)}`;
+    $("backend-info").textContent = `Backend unavailable: ${errText(e)}`;
     log(`Backend error: ${errText(e)}`, "err");
   }
 }
@@ -283,30 +283,30 @@ async function connectMesh() {
   const btn = $("mesh-connect-btn");
 
   btn.disabled = true;
-  btn.textContent = "⏳ Подключение…";
+  btn.textContent = "⏳ Connecting…";
 
   if (!window.isSecureContext) {
-    log("Web Bluetooth работает только через https:// или http://localhost.", "err");
+    log("Web Bluetooth works only over https:// or http://localhost.", "err");
 
     btn.disabled = false;
-    btn.textContent = "⬡ Подключить BLE";
+    btn.textContent = "⬡ Connect BLE";
     $("mesh-dot").className = "dot err";
 
     return;
   }
 
   if (!navigator.bluetooth) {
-    log("navigator.bluetooth недоступен. Используй Chrome/Edge.", "err");
+    log("navigator.bluetooth is unavailable. Use Chrome/Edge.", "err");
 
     btn.disabled = false;
-    btn.textContent = "⬡ Подключить BLE";
+    btn.textContent = "⬡ Connect BLE";
     $("mesh-dot").className = "dot err";
 
     return;
   }
 
   try {
-    log("Попытка подключения к Meshtastic BLE…", "info");
+    log("Trying to connect to Meshtastic BLE…", "info");
 
     const mod = await loadMeshtasticModule();
 
@@ -318,11 +318,11 @@ async function connectMesh() {
     const MeshDevice = pickExport(mod, ["MeshDevice"]);
 
     if (!TransportWebBluetooth) {
-      throw new Error("В meshtastic-wb.js не найден TransportWebBluetooth.");
+      throw new Error("TransportWebBluetooth was not found in meshtastic-wb.js.");
     }
 
     if (!MeshDevice) {
-      throw new Error("В meshtastic-wb.js не найден MeshDevice.");
+      throw new Error("MeshDevice was not found in meshtastic-wb.js.");
     }
 
     if (typeof TransportWebBluetooth.create === "function") {
@@ -345,36 +345,36 @@ async function connectMesh() {
 
     $("mesh-dot").className = "dot on";
     $("mesh-disconnect-btn").disabled = false;
-    $("mesh-connect-btn").textContent = "Подключено";
+    $("mesh-connect-btn").textContent = "Connected";
 
     $("mesh-info").textContent =
       `BLE: ${devInfo}\n` +
       `TX/RX channel slot: ${MESH_CHANNEL_SLOT}\n` +
-      `Отправка: ${canSendText() ? "доступна" : "не найдена"}`;
+      `Sending: ${canSendText() ? "available" : "not found"}`;
 
     setMonitor(
-      `Мониторю Meshtastic slot ${MESH_CHANNEL_SLOT}.\n` +
-        `Жду сообщения вида ST,init,<wallet> или ST,<receiver>,<token>,<amount>,<signature>`
+      `Monitoring Meshtastic slot ${MESH_CHANNEL_SLOT}.\n` +
+        `Waiting for messages like ST,init,<wallet> or ST,<receiver>,<token>,<amount>,<signature>`
     );
 
-    log("✓ Transport подключён. MeshDevice создан.", "ok");
+    log("✓ Transport connected. MeshDevice created.", "ok");
 
     if (typeof meshDevice.configure === "function") {
-      log("configure() запущен в фоне.", "info");
+      log("configure() started in the background.", "info");
 
       meshDevice
         .configure()
-        .then(() => log("✓ configure() завершён.", "ok"))
-        .catch((e) => log(`⚠ configure() ошибка: ${errText(e)}`, "warn"));
+        .then(() => log("✓ configure() completed.", "ok"))
+        .catch((e) => log(`⚠ configure() error: ${errText(e)}`, "warn"));
     }
   } catch (e) {
-    log(`Ошибка подключения Meshtastic: ${errText(e)}`, "err");
+    log(`Meshtastic connection error: ${errText(e)}`, "err");
 
     btn.disabled = false;
-    btn.textContent = "⬡ Подключить BLE";
+    btn.textContent = "⬡ Connect BLE";
     $("mesh-dot").className = "dot err";
 
-    setMonitor(`Ошибка BLE: ${errText(e)}`);
+    setMonitor(`BLE error: ${errText(e)}`);
   }
 }
 
@@ -413,7 +413,7 @@ function attachMeshEvents(device) {
       log(`Status: ${compactJson(s)}`, "info");
     });
   } catch (e) {
-    log(`Не удалось подписаться на events: ${errText(e)}`, "err");
+    log(`Failed to subscribe to events: ${errText(e)}`, "err");
   }
 }
 
@@ -454,9 +454,9 @@ async function handlePossibleMessage(pkt, source) {
     );
 
     setMonitor(
-      `Получен init от node=${fromNode ?? "?"}\n` +
+      `Init received from node=${fromNode ?? "?"}\n` +
         `Wallet: ${wallet}\n` +
-        `Проверяю баланс SOL/USDC…`
+        `Checking SOL/USDC balance…`
     );
 
     try {
@@ -473,23 +473,23 @@ async function handlePossibleMessage(pkt, source) {
       log(`Backend response: ${data.response}`, "ok");
 
       setMonitor(
-        `Backend ответил:\n${data.response}\n` +
-          `Отправляю reply в Meshtastic slot ${MESH_CHANNEL_SLOT}…`
+        `Backend responded:\n${data.response}\n` +
+          `Sending reply to Meshtastic slot ${MESH_CHANNEL_SLOT}…`
       );
 
       await sendReply(data.response, packetId);
 
-      setMonitor(`Ответ поставлен в очередь:\n${data.response}`);
+      setMonitor(`Response queued:\n${data.response}`);
     } catch (e) {
       const errResponse = e?.data?.response ?? "ST,S=0,C=0,e=2";
 
-      log(`Ошибка обработки ST init: ${errText(e)}`, "err");
-      setMonitor(`Ошибка обработки init:\n${errText(e)}\nОтправляю ${errResponse}`);
+      log(`ST init processing error: ${errText(e)}`, "err");
+      setMonitor(`Init processing error:\n${errText(e)}\nSending ${errResponse}`);
 
       try {
         await sendReply(errResponse, packetId);
       } catch (sendErr) {
-        log(`Не удалось отправить ошибку init клиенту: ${errText(sendErr)}`, "err");
+        log(`Failed to send init error to client: ${errText(sendErr)}`, "err");
       }
     }
 
@@ -506,7 +506,7 @@ async function handlePossibleMessage(pkt, source) {
       "ok"
     );
 
-    log("1/3 recreate transaction: отправляю данные в backend /api/submit", "info");
+    log("1/3 recreate transaction: sending data to backend /api/submit", "info");
 
     log(
       `TX metadata: fromNode=${fromNode ?? "?"}, receiver=${tx.receiver}, token=${
@@ -516,15 +516,15 @@ async function handlePossibleMessage(pkt, source) {
     );
 
     setMonitor(
-      `Получена подпись от node=${fromNode ?? "?"}\n` +
+      `Signature received from node=${fromNode ?? "?"}\n` +
         `1/3 recreate transaction…\n` +
         `receiver=${tx.receiver}\n` +
         `token=${tx.token}, amount=${tx.amount}`
     );
 
     try {
-      log("2/3 check signature: backend восстановит tx и проверит подпись", "info");
-      log("3/3 send to RPC node: backend отправит tx и дождётся confirmed", "info");
+      log("2/3 check signature: backend will rebuild the tx and verify the signature", "info");
+      log("3/3 send to RPC node: backend will send the tx and wait for confirmed", "info");
 
       const data = await postJson(`${API_BASE}/api/submit`, {
         fromNode,
@@ -542,8 +542,8 @@ async function handlePossibleMessage(pkt, source) {
         log(`Backend submit confirmed: ${data.response}`, "ok");
 
         setMonitor(
-          `Транзакция confirmed:\n${data.txSig ?? data.response}\n` +
-            `Отправляю клиенту:\n${data.response}`
+          `Transaction confirmed:\n${data.txSig ?? data.response}\n` +
+            `Sending to client:\n${data.response}`
         );
       } else {
         log(`Backend submit error: ${compactJson(data)}`, "err");
@@ -553,22 +553,22 @@ async function handlePossibleMessage(pkt, source) {
       await sendReply(data.response, packetId);
 
       log(
-        `TX hash/error отправлен клиенту: ${data.response}`,
+        `TX hash/error sent to client: ${data.response}`,
         data.ok ? "ok" : "err"
       );
     } catch (e) {
       const errResponse = e?.data?.response ?? "ST,e=3";
 
-      log(`Ошибка обработки ST tx: ${errText(e)}`, "err");
+      log(`ST tx processing error: ${errText(e)}`, "err");
 
       setMonitor(
-        `Ошибка обработки tx:\n${errText(e)}\nОтправляю ${errResponse}`
+        `Tx processing error:\n${errText(e)}\nSending ${errResponse}`
       );
 
       try {
         await sendReply(errResponse, packetId);
       } catch (sendErr) {
-        log(`Не удалось отправить ошибку клиенту: ${errText(sendErr)}`, "err");
+        log(`Failed to send error to client: ${errText(sendErr)}`, "err");
       }
     }
 
@@ -578,7 +578,7 @@ async function handlePossibleMessage(pkt, source) {
 
 async function sendReply(text, replyId) {
   if (!meshDevice && !transport) {
-    throw new Error("Meshtastic не подключён.");
+    throw new Error("Meshtastic is not connected.");
   }
 
   const dst = MESH_BROADCAST_ADDR;
@@ -594,7 +594,7 @@ async function sendReply(text, replyId) {
     );
 
     log(
-      `TX channel reply через MeshDevice.sendText(): "${text}" → broadcast, slot ${MESH_CHANNEL_SLOT}, replyId=${
+      `TX channel reply via MeshDevice.sendText(): "${text}" → broadcast, slot ${MESH_CHANNEL_SLOT}, replyId=${
         replyId ?? "-"
       }`,
       "info"
@@ -609,22 +609,22 @@ async function sendReply(text, replyId) {
     });
 
     log(
-      `TX channel reply через transport.sendPacket(): "${text}" → broadcast, slot ${MESH_CHANNEL_SLOT}, replyId=${
+      `TX channel reply via transport.sendPacket(): "${text}" → broadcast, slot ${MESH_CHANNEL_SLOT}, replyId=${
         replyId ?? "-"
       }`,
       "info"
     );
   } else if (typeof meshDevice?.sendTextMessage === "function") {
     sendPromise = meshDevice.sendTextMessage(text);
-    log(`TX reply через MeshDevice.sendTextMessage(): "${text}"`, "info");
+    log(`TX reply via MeshDevice.sendTextMessage(): "${text}"`, "info");
   } else if (typeof transport?.send === "function") {
     sendPromise = transport.send(text);
-    log(`TX reply через transport.send(): "${text}"`, "info");
+    log(`TX reply via transport.send(): "${text}"`, "info");
   } else if (typeof transport?.write === "function") {
     sendPromise = transport.write(new TextEncoder().encode(text));
-    log(`TX reply через transport.write(): "${text}"`, "info");
+    log(`TX reply via transport.write(): "${text}"`, "info");
   } else {
-    throw new Error("Нет доступного метода отправки.");
+    throw new Error("No available send method.");
   }
 
   await new Promise((resolve) => setTimeout(resolve, 300));
@@ -633,14 +633,14 @@ async function sendReply(text, replyId) {
     const s = errText(e);
 
     if (s.includes('"error":3') || s.includes("error:3")) {
-      log(`Статус после broadcast: ${s}`, "info");
+      log(`Status after broadcast: ${s}`, "info");
       return;
     }
 
-    log(`Поздний ответ sendText(): ${s}`, "warn");
+    log(`Late sendText() response: ${s}`, "warn");
   });
 
-  log(`✓ Ответ поставлен в очередь в канал: "${text}"`, "ok");
+  log(`✓ Response queued to channel: "${text}"`, "ok");
 }
 
 async function disconnectMesh() {
@@ -653,14 +653,14 @@ async function disconnectMesh() {
     meshDevice = null;
     myNodeNum = null;
 
-    $("mesh-info").textContent = "Нода не подключена";
+    $("mesh-info").textContent = "Node not connected";
     $("mesh-dot").className = "dot";
     $("mesh-disconnect-btn").disabled = true;
     $("mesh-connect-btn").disabled = false;
-    $("mesh-connect-btn").textContent = "⬡ Подключить BLE";
+    $("mesh-connect-btn").textContent = "⬡ Connect BLE";
 
-    setMonitor("Жду подключения Meshtastic BLE…");
-    log("Meshtastic отключён вручную.", "warn");
+    setMonitor("Waiting for Meshtastic BLE connection…");
+    log("Meshtastic disconnected manually.", "warn");
   }
 }
 

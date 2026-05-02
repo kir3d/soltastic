@@ -24,7 +24,7 @@ const COMPUTE_UNIT_LIMIT = 800_000;
 const TX_REPLY_TIMEOUT_MS = 180_000;
 
 // devnet USDC mint.
-// Для mainnet заменить на:
+// For mainnet, replace with:
 // EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGkZwyTDt1v
 const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
@@ -275,13 +275,13 @@ function parseDecimalToUnits(value, decimals, options = {}) {
   const s = normalizeDecimalInput(value);
 
   if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(s)) {
-    throw new Error("Неверный формат суммы");
+    throw new Error("Invalid amount format");
   }
 
   const [whole, fractionRaw = ""] = s.split(".");
 
   if (fractionRaw.length > decimals) {
-    throw new Error(`Слишком много знаков после точки, максимум ${decimals}`);
+    throw new Error(`Too many decimal places, max ${decimals}`);
   }
 
   const fraction = fractionRaw.padEnd(decimals, "0");
@@ -289,7 +289,7 @@ function parseDecimalToUnits(value, decimals, options = {}) {
     BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
 
   if (!allowZero && units <= 0n) {
-    throw new Error("Сумма должна быть больше нуля");
+    throw new Error("Amount must be greater than zero");
   }
 
   return units;
@@ -299,7 +299,7 @@ function parsePublicKey(value, label) {
   try {
     return new PublicKey(String(value).trim());
   } catch {
-    throw new Error(`${label}: неверный Solana-адрес`);
+    throw new Error(`${label}: invalid Solana address`);
   }
 }
 
@@ -386,15 +386,15 @@ function parseTxHashReply(text) {
 
 function txErrorText(code) {
   const map = {
-    "3": "Ошибка отправки транзакции сервером",
-    "4": "Сервер не знает mesh sender, нужен init",
-    "5": "Nonce не найден или устарел",
-    "6": "Неверная подпись клиента",
-    "7": "Транзакция не подтверждена или timeout",
-    "8": "Транзакция упала on-chain",
+    "3": "Server failed to send the transaction",
+    "4": "Server does not know the mesh sender, init is required",
+    "5": "Nonce not found or expired",
+    "6": "Invalid client signature",
+    "7": "Transaction not confirmed or timed out",
+    "8": "Transaction failed on-chain",
   };
 
-  return map[String(code)] ?? `Ошибка сервера e=${code}`;
+  return map[String(code)] ?? `Server error e=${code}`;
 }
 
 function clearTxReplyWait() {
@@ -414,11 +414,11 @@ function startTxReplyWait() {
     $("transfer-send-btn").disabled = false;
 
     setTransferStatus(
-      "Timeout: сервер не прислал подтверждённый tx_hash",
+      "Timeout: server did not send a confirmed tx_hash",
       "err"
     );
 
-    log("Timeout ожидания confirmed TX от сервера", "err");
+    log("Timed out waiting for confirmed TX from server", "err");
   }, TX_REPLY_TIMEOUT_MS);
 }
 
@@ -442,7 +442,7 @@ function renderBalances() {
 
 function selectToken(token) {
   if (!serverState) {
-    setTransferStatus("Сначала получи ответ сервера с балансами и nonce", "err");
+    setTransferStatus("Get the server response with balances and nonce first", "err");
     return;
   }
 
@@ -459,15 +459,15 @@ function selectToken(token) {
 
 function validateTransferInput() {
   if (!solanaAddress) {
-    throw new Error("Wallet не подключён");
+    throw new Error("Wallet is not connected");
   }
 
   if (!serverState) {
-    throw new Error("Нет ответа сервера с nonce");
+    throw new Error("No server response with nonce");
   }
 
   if (!selectedToken) {
-    throw new Error("Не выбран токен");
+    throw new Error("No token selected");
   }
 
   const senderPk = parsePublicKey(solanaAddress, "sender");
@@ -493,21 +493,21 @@ function validateTransferInput() {
 
     if (required > serverState.solLamports) {
       throw new Error(
-        `Недостаточно SOL: сумма + ${SERVICE_FEE_SOL} SOL fee + reserve на tx fee больше баланса`
+        `Insufficient SOL: amount + ${SERVICE_FEE_SOL} SOL fee + tx fee reserve exceeds the balance`
       );
     }
   }
 
   if (selectedToken === "USDC") {
     if (amountUnits > serverState.usdcUnits) {
-      throw new Error("Недостаточно USDC");
+      throw new Error("Insufficient USDC");
     }
 
     const requiredSol = SERVICE_FEE_LAMPORTS + TX_FEE_RESERVE_LAMPORTS;
 
     if (requiredSol > serverState.solLamports) {
       throw new Error(
-        `Недостаточно SOL для оплаты ${SERVICE_FEE_SOL} SOL service fee`
+        `Insufficient SOL to pay ${SERVICE_FEE_SOL} SOL service fee`
       );
     }
   }
@@ -566,9 +566,9 @@ function buildTransaction({
     recentBlockhash: serverState.nonceValue,
   });
 
-  // ВАЖНО:
-  // Для durable nonce первой инструкцией ОБЯЗАТЕЛЬНО должен быть nonceAdvance.
-  // Иначе RPC будет считать nonceValue обычным recentBlockhash и вернёт BlockhashNotFound.
+  // IMPORTANT:
+  // For durable nonce, nonceAdvance MUST be the first instruction.
+  // Otherwise RPC treats nonceValue as a normal recentBlockhash and returns BlockhashNotFound.
   tx.add(
     SystemProgram.nonceAdvance({
       noncePubkey: noncePk,
@@ -576,8 +576,8 @@ function buildTransaction({
     })
   );
 
-  // Phantom может сам добавить ComputeBudget-инструкции.
-  // Чтобы message был детерминированным, добавляем их сами после nonceAdvance.
+  // Phantom may add ComputeBudget instructions by itself.
+  // To keep the message deterministic, add them ourselves after nonceAdvance.
   tx.add(
     createComputeUnitPriceInstruction(COMPUTE_UNIT_PRICE_MICRO_LAMPORTS)
   );
@@ -620,7 +620,7 @@ function buildTransaction({
       )
     );
   } else {
-    throw new Error(`Неизвестный токен: ${selectedToken}`);
+    throw new Error(`Unknown token: ${selectedToken}`);
   }
 
   tx.add(
@@ -691,17 +691,17 @@ async function signAndSendTransfer() {
     $("transfer-send-btn").disabled = true;
 
     if (!meshDevice) {
-      throw new Error("Mesh не подключён");
+      throw new Error("Mesh is not connected");
     }
 
     if (!solanaProvider?.signTransaction) {
-      throw new Error("Wallet не поддерживает signTransaction");
+      throw new Error("Wallet does not support signTransaction");
     }
 
     if (serverState.serverFrom == null || serverState.serverPacketId == null) {
       throw new Error(
-        "Не могу отправить reply: у серверного RX-пакета нет from/id.\n" +
-          "Смотри строку RX packet debug в логе."
+        "Cannot send reply: the server RX packet has no from/id.\n" +
+          "See the RX packet debug line in the log."
       );
     }
 
@@ -711,7 +711,7 @@ async function signAndSendTransfer() {
     const unsignedMessageBase64 = debugTransactionMessage("unsigned", tx);
     window.slotasticUnsignedMessageBase64 = unsignedMessageBase64;
 
-    setTransferStatus("Открой wallet и подпиши транзакцию", "info");
+    setTransferStatus("Open your wallet and sign the transaction", "info");
 
     const signedTx = await solanaProvider.signTransaction(tx);
 
@@ -737,7 +737,7 @@ async function signAndSendTransfer() {
     );
 
     if (!sigEntry?.signature) {
-      throw new Error("Wallet не вернул подпись sender");
+      throw new Error("Wallet did not return the sender signature");
     }
 
     const signature = base58Encode(sigEntry.signature);
@@ -784,7 +784,7 @@ async function signAndSendTransfer() {
     startTxReplyWait();
 
     setTransferStatus(
-      "Подпись отправляется серверу.\nЖдём confirmed tx_hash в slot 7...",
+      "Signature is being sent to the server.\nWaiting for confirmed tx_hash in slot 7...",,
       "info"
     );
 
@@ -802,12 +802,12 @@ async function signAndSendTransfer() {
       );
 
       setTransferStatus(
-        "Подпись отправлена.\nЖдём confirmed tx_hash от сервера...",
+        "Signature sent.\nWaiting for confirmed tx_hash from the server...",
         "ok"
       );
 
       log(
-        `TX reply отправлен broadcast replyId=${serverState.serverPacketId}: ${text}`,
+        `TX reply sent as broadcast replyId=${serverState.serverPacketId}: ${text}`,
         "ok"
       );
     } catch (e) {
@@ -815,11 +815,11 @@ async function signAndSendTransfer() {
 
       if (isMeshPacketTimeoutError(e)) {
         setTransferStatus(
-          "Reply отправлен, но Mesh ACK timeout.\nЖдём confirmed tx_hash от сервера...",
+          "Reply was sent, but Mesh ACK timed out.\nWaiting for confirmed tx_hash from the server...",
           "info"
         );
 
-        log(`Mesh ACK timeout для TX reply: ${msg}`, "err");
+        log(`Mesh ACK timeout for TX reply: ${msg}`, "err");
         return;
       }
 
@@ -851,7 +851,7 @@ async function connectSolana() {
     window.backpack;
 
   if (!provider) {
-    log("Wallet не найден", "err");
+    log("Wallet not found", "err");
     return;
   }
 
@@ -867,9 +867,9 @@ async function connectSolana() {
     $("sol-disconnect-btn").disabled = false;
     $("msg-input").value = `ST,init,${solanaAddress}`;
 
-    log("Wallet подключён", "ok");
+    log("Wallet connected", "ok");
   } catch (e) {
-    log(`Ошибка подключения wallet: ${errorToString(e)}`, "err");
+    log(`Wallet connection error: ${errorToString(e)}`, "err");
   }
 }
 
@@ -882,7 +882,7 @@ function disconnectSolana() {
   awaitingTxStatus = false;
   clearTxReplyWait();
 
-  $("sol-info").textContent = "Кошелёк не подключён";
+  $("sol-info").textContent = "Wallet not connected";
   $("sol-dot").className = "dot";
   $("send-btn").disabled = true;
   $("sol-disconnect-btn").disabled = true;
@@ -893,7 +893,7 @@ function disconnectSolana() {
   }
 
   renderBalances();
-  log("Wallet отключён", "info");
+  log("Wallet disconnected", "info");
 }
 
 // --- MESH ---
@@ -922,7 +922,7 @@ function handleMeshMessage(packet) {
 
       $("transfer-send-btn").disabled = false;
 
-      setTransferStatus(`Транзакция подтверждена:\n${txHash}`, "ok");
+      setTransferStatus(`Transaction confirmed:\n${txHash}`, "ok");
       log(`Confirmed TX: ${txHash}`, "ok");
 
       window.slotasticLastTxHash = txHash;
@@ -952,7 +952,7 @@ function handleMeshMessage(packet) {
 
       $("transfer-send-btn").disabled = false;
 
-      setTransferStatus(`Непонятный ответ сервера:\n${text}`, "err");
+      setTransferStatus(`Unrecognized server response:\n${text}`, "err");
       log(`Unexpected TX reply: ${text}`, "err");
 
       return;
@@ -966,7 +966,7 @@ function handleMeshMessage(packet) {
     $("send-btn").disabled = false;
 
     setSendStatus(
-      `Ошибка сервера e=${parsed.error}; SOL=${parsed.solBalanceText}, USDC=${parsed.usdcBalanceText}`,
+      `Server error e=${parsed.error}; SOL=${parsed.solBalanceText}, USDC=${parsed.usdcBalanceText}`,
       "err"
     );
 
@@ -1017,8 +1017,8 @@ function handleMeshMessage(packet) {
 
       renderBalances();
 
-      setSendStatus("Ответ сервера получен.\nБалансы доступны в Wallet.", "ok");
-      log("Баланс и durable nonce получены", "ok");
+      setSendStatus("Server response received.\nBalances are available in Wallet.", "ok");
+      log("Balance and durable nonce received", "ok");
     } catch (e) {
       const msg = errorToString(e);
       setSendStatus(msg, "err");
@@ -1031,7 +1031,7 @@ function handleMeshMessage(packet) {
 
 async function connectMesh() {
   if (meshConnecting || meshConnected || meshDevice) {
-    log("Mesh уже подключён или подключается", "info");
+    log("Mesh is already connected or connecting", "info");
     return;
   }
 
@@ -1058,9 +1058,9 @@ async function connectMesh() {
     meshConnected = true;
 
     $("mesh-dot").className = "dot on";
-    $("mesh-info").textContent = "Нода подключена";
+    $("mesh-info").textContent = "Node connected";
 
-    log("Mesh подключён", "ok");
+    log("Mesh connected", "ok");
 
     meshDevice.configure().catch((e) => {
       log(`Mesh configure warning: ${errorToString(e)}`, "err");
@@ -1073,7 +1073,7 @@ async function connectMesh() {
 
     $("mesh-connect-btn").disabled = false;
 
-    log(`Ошибка подключения BLE: ${errorToString(e)}`, "err");
+    log(`BLE connection error: ${errorToString(e)}`, "err");
   } finally {
     meshConnecting = false;
   }
@@ -1083,12 +1083,12 @@ async function connectMesh() {
 
 async function sendInit() {
   if (!meshDevice) {
-    log("Mesh не подключён", "err");
+    log("Mesh is not connected", "err");
     return;
   }
 
   if (!solanaAddress) {
-    log("Нет wallet", "err");
+    log("No wallet", "err");
     return;
   }
 
@@ -1110,30 +1110,30 @@ async function sendInit() {
   awaitingInitReply = true;
   $("send-btn").disabled = true;
 
-  setSendStatus("Init отправляется.\nЖдём ответ сервера в slot 7...", "info");
+  setSendStatus("Init is being sent.\nWaiting for the server response in slot 7...", "info");
   log(`TX init: ${text}`, "info");
 
   try {
     await sendTextQueued(text, MESH_BROADCAST_ADDR, MESH_CHANNEL_SLOT);
 
-    setSendStatus("Init отправлен.\nЖдём ответ сервера в slot 7...", "info");
-    log(`Отправлено: ${text}`, "ok");
+    setSendStatus("Init sent.\nWaiting for the server response in slot 7...", "info");
+    log(`Sent: ${text}`, "ok");
   } catch (e) {
     const msg = errorToString(e);
 
     if (isMeshPacketTimeoutError(e)) {
-      log(`Mesh ACK timeout для init: ${msg}`, "err");
+      log(`Mesh ACK timeout for init: ${msg}`, "err");
 
       if (serverState) {
         setSendStatus(
-          "Init дошёл: ответ сервера уже получен, ACK timeout игнорируем.",
+          "Init arrived: the server response has already been received, ignoring ACK timeout.",
           "ok"
         );
         $("send-btn").disabled = false;
         awaitingInitReply = false;
       } else {
         setSendStatus(
-          "Init отправлен, но ACK timeout.\nВсё ещё ждём ответ сервера...",
+          "Init was sent, but ACK timed out.\nStill waiting for the server response...",
           "info"
         );
       }
@@ -1144,8 +1144,8 @@ async function sendInit() {
     awaitingInitReply = false;
     $("send-btn").disabled = false;
 
-    log(`Ошибка отправки init: ${msg}`, "err");
-    setSendStatus(`Ошибка отправки init: ${msg}`, "err");
+    log(`Init send error: ${msg}`, "err");
+    setSendStatus(`Init send error: ${msg}`, "err");
   }
 }
 

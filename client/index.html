@@ -22,12 +22,12 @@
     </div>
 
     <div class="info-row" id="sol-info">
-      Кошелёк не подключён
+      Wallet not connected
     </div>
 
     <div style="display:flex;gap:10px">
-      <button class="btn btn-sol" id="sol-connect-btn">◎ Подключить</button>
-      <button class="btn btn-outline" id="sol-disconnect-btn" disabled>Отключить</button>
+      <button class="btn btn-sol" id="sol-connect-btn">◎ Connect</button>
+      <button class="btn btn-outline" id="sol-disconnect-btn" disabled>Disconnect</button>
     </div>
     <div class="balance-actions" id="balance-actions" hidden>
       <button class="btn btn-balance" id="sol-balance-btn">SOL: -</button>
@@ -53,12 +53,12 @@
     </div>
 
     <div class="info-row" id="mesh-info">
-      Нода не подключена
+      Node not connected
     </div>
 
     <div style="display:flex;gap:10px">
-      <button class="btn btn-mesh" id="mesh-connect-btn">⬡ Подключить BLE</button>
-      <button class="btn btn-outline" id="mesh-disconnect-btn" disabled>Отключить</button>
+      <button class="btn btn-mesh" id="mesh-connect-btn">⬡ Connect BLE</button>
+      <button class="btn btn-outline" id="mesh-disconnect-btn" disabled>Disconnect</button>
     </div>
   </div>
 
@@ -70,7 +70,7 @@
 
     <div class="ping-inner">
       <input id="msg-input" value="ST,init,<wallet>" disabled>
-      <button class="btn btn-mesh" id="send-btn" disabled>▶ Отправить</button>
+      <button class="btn btn-mesh" id="send-btn" disabled>▶ Send</button>
     </div>
 
     <div id="send-status" class="info-row" style="display:none"></div>
@@ -78,8 +78,8 @@
 
   <div class="card log-section">
     <div class="card-title">
-      <span>🗒 Лог</span>
-      <button id="clear-log-btn" class="btn btn-outline" style="margin-left:auto">Очистить</button>
+      <span>🗒 Log</span>
+      <button id="clear-log-btn" class="btn btn-outline" style="margin-left:auto">Clear</button>
     </div>
 
     <div class="log-body" id="log"></div>

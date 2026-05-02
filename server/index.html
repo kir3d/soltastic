@@ -18,8 +18,8 @@
         <div class="dot" id="backend-dot"></div>
         <span>Solana Backend</span>
       </div>
-      <div class="info-row" id="backend-info">Backend не проверен</div>
-      <button class="btn btn-sol" id="backend-check-btn">◎ Проверить backend</button>
+      <div class="info-row" id="backend-info">Backend not checked</div>
+      <button class="btn btn-sol" id="backend-check-btn">◎ Check backend</button>
     </div>
 
     <div class="card" id="mesh-card">
@@ -27,26 +27,26 @@
         <div class="dot" id="mesh-dot"></div>
         <span>Meshtastic Node</span>
       </div>
-      <div class="info-row" id="mesh-info">Нода не подключена</div>
+      <div class="info-row" id="mesh-info">Node not connected</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-mesh" id="mesh-connect-btn">⬡ Подключить BLE</button>
-        <button class="btn btn-outline" id="mesh-disconnect-btn" disabled>Отключить</button>
+        <button class="btn btn-mesh" id="mesh-connect-btn">⬡ Connect BLE</button>
+        <button class="btn btn-outline" id="mesh-disconnect-btn" disabled>Disconnect</button>
         <button class="btn btn-outline" id="mesh-debug-btn">Debug</button>
       </div>
     </div>
 
     <div class="card ping-card">
       <div class="card-title">
-        <span>📡 Мониторинг</span>
+        <span>📡 Monitoring</span>
         <span style="margin-left:auto;color:var(--muted)">slot 7 · ST,init,&lt;wallet&gt;</span>
       </div>
-      <div class="info-row" id="monitor-info">Жду подключения Meshtastic BLE…</div>
+      <div class="info-row" id="monitor-info">Waiting for Meshtastic BLE connection…</div>
     </div>
 
     <div class="card log-section">
       <div class="card-title">
-        <span>🗒 Лог</span>
-        <button id="clear-log-btn" style="margin-left:auto" class="btn btn-outline">Очистить</button>
+        <span>🗒 Log</span>
+        <button id="clear-log-btn" style="margin-left:auto" class="btn btn-outline">Clear</button>
       </div>
       <div class="log-body" id="log"></div>
     </div>
