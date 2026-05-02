@@ -77,7 +77,26 @@ The project contains two parts:
 
 ## Protocol
 
-### Init request
+Soltastic uses short comma-separated text messages so they can fit into Meshtastic payloads.
+
+Current Meshtastic settings:
+
+- Channel slot: `7`
+- Destination: broadcast, `0xffffffff`
+- Message prefix: `ST`
+
+The protocol has two stages:
+
+1. Init request — the client asks the server to prepare a durable nonce.
+2. Transaction request — the client signs locally and sends only the transaction parameters plus the sender signature through the mesh.
+
+The server never receives the user's private key. Signing happens locally in the user's wallet.
+
+---
+
+### 1. Init request
+
+Client → Meshtastic → Server:
 
 ```text
 ST,init,<wallet_address>
@@ -89,35 +108,182 @@ Example:
 ST,init,BX64tYBofmJM6PTWXtHjA8p8ij5dnzsqLXbgddaVmkom
 ```
 
-### Successful response
+Fields:
+
+| Field | Meaning |
+|---|---|
+| `ST` | Soltastic protocol prefix |
+| `init` | Init command |
+| `<wallet_address>` | User's Solana wallet address |
+
+---
+
+### 2. Init response
+
+Server → Meshtastic → Client:
 
 ```text
-ST,S=<balance_sol>,C=<balance_usdc>,a=<nonce_account>,v=<nonce_value>.p=<fee_address>
+ST,S=<balance_sol>,C=<balance_usdc>,a=<nonce_account>,v=<nonce_value>,p=<server_fee_address>
+```
+
+Example:
+
+```text
+ST,S=1.23456789,C=25.5,a=GBaiLdo36MkYfcrASC4ispbCGjDuKAJPnXDCCNv1kzyo,v=AxEQhxUf4Z9GSu6KGbSktrUCRwSFtKYUjeYJXuR87jfK,p=29ySgo67m9GJTGgJ111MDwvpfGPkUboUX9wk9My47ync
 ```
 
 Fields:
 
 | Field | Meaning |
 |---|---|
-| `S` | SOL balance |
-| `C` | USDC balance |
-| `a` | durable nonce account address |
-| `v` | durable nonce value |
+| `S` | User's SOL balance |
+| `C` | User's USDC balance |
+| `a` | Durable nonce account address |
+| `v` | Durable nonce value used as the transaction blockhash |
+| `p` | Server fee address |
 
-### Low SOL response
+After this response, the client can build a durable nonce transaction locally.
+
+---
+
+### 3. Client-side transaction construction
+
+The client builds the transaction locally with:
+
+1. `nonceAdvance` as the first instruction.
+2. Optional compute budget instructions.
+3. User transfer instruction:
+   - SOL transfer, or
+   - USDC SPL token transfer.
+4. Service fee transfer to the server fee address.
+5. `nonceAuthorize`, transferring nonce authority to the server fee address.
+
+The transaction is signed locally by the user's wallet.
+
+Only the sender signature is sent over Meshtastic.
+
+---
+
+### 4. Transaction request
+
+Client → Meshtastic → Server:
 
 ```text
-ST,S=<balance_sol>,C=<balance_usdc>,e=1
+ST,<receiver>,<token>,<amount>,<signature>
 ```
 
-### Error response
+Example SOL transfer:
 
 ```text
-ST,S=0,C=0,e=2
+ST,9xQeWvG816bUx9EPjHmaT23yvVM2ZWp9W5LrYZKqKxY,SOL,0.01,5Yp...
 ```
 
+Example USDC transfer:
 
+```text
+ST,9xQeWvG816bUx9EPjHmaT23yvVM2ZWp9W5LrYZKqKxY,USDC,2.5,5Yp...
+```
 
+Fields:
+
+| Field | Meaning |
+|---|---|
+| `ST` | Soltastic protocol prefix |
+| `<receiver>` | Receiver Solana address |
+| `<token>` | Token symbol: `SOL` or `USDC` |
+| `<amount>` | Human-readable transfer amount |
+| `<signature>` | Base58 sender signature from the locally signed transaction |
+
+The server uses the previous init state for the mesh sender, reconstructs the same transaction, verifies the signature, submits the transaction to Solana RPC, and waits for confirmation.
+
+---
+
+### 5. Successful transaction response
+
+Server → Meshtastic → Client:
+
+```text
+ST,<tx_hash>
+```
+
+Example:
+
+```text
+ST,3NuhRY8oU7kJ5xZrWq5Q1q4E9v9fY7Kj9Yd5rR2LqN4wVvYdEJZJr9uC6Q7a8...
+```
+
+Fields:
+
+| Field | Meaning |
+|---|---|
+| `ST` | Soltastic protocol prefix |
+| `<tx_hash>` | Confirmed Solana transaction signature |
+
+---
+
+### 6. Error responses
+
+Server → Meshtastic → Client:
+
+```text
+ST,S=<balance_sol>,C=<balance_usdc>,e=<error_code>
+```
+
+or:
+
+```text
+ST,e=<error_code>
+```
+
+Error codes:
+
+| Code | Meaning |
+|---|---|
+| `1` | Client SOL balance is below the required minimum |
+| `2` | Init/backend error |
+| `3` | Server failed to submit the transaction |
+| `4` | Server does not know the mesh sender; init is required |
+| `5` | Nonce was not found or expired |
+| `6` | Invalid client signature |
+| `7` | Transaction was not confirmed or timed out |
+| `8` | Transaction failed on-chain |
+
+---
+
+### Message flow
+
+```text
+Client Wallet
+   |
+   | 1. ST,init,<wallet>
+   v
+Meshtastic Mesh
+   |
+   v
+Server
+   |
+   | 2. ST,S=<SOL>,C=<USDC>,a=<nonce_account>,v=<nonce_value>,p=<fee_address>
+   v
+Client Wallet
+   |
+   | 3. Build durable nonce transaction locally
+   | 4. Sign transaction locally
+   |
+   | 5. ST,<receiver>,<token>,<amount>,<signature>
+   v
+Meshtastic Mesh
+   |
+   v
+Server
+   |
+   | 6. Rebuild transaction
+   | 7. Verify signature
+   | 8. Submit to Solana RPC
+   |
+   | 9. ST,<tx_hash>
+   v
+Client Wallet
+```
 ## Repository Structure
 
 Recommended clean structure:
@@ -229,18 +395,11 @@ Known dependency note: Solana JS SDK v1 may currently produce moderate `npm audi
 
 ## Roadmap
 
-- [x] Meshtastic BLE connection
-- [x] Monitor Meshtastic channel slot `7`
-- [x] Parse `ST,init,<wallet>` messages
-- [x] Check SOL and USDC balances
-- [x] Create durable nonce account
-- [x] Reply with nonce account and nonce value
-- [ ] Client-side durable nonce transaction builder
-- [ ] Signed transaction transfer over Meshtastic
-- [ ] Server-side signed transaction submission to Solana RPC
-- [ ] Server payment distribution design
-- [ ] Demo video / GIF
-- [ ] Docs: architecture, API, product, roadmap
+- [x] Basic version (init request, get balance, create SOL transaction, send metadata + signatures, recreate transaction, send to RPC, confirm tx hash to client)
+- [ ] Connecting Meshtastic nodes via serial and WiFi, exploring the possibility of connecting to MeshMonitor
+- [ ] Add support for other tokens
+- [ ] Add support for memos
+- [ ] Add support for other transaction types (calling smart contracts)
 
 ---
 
