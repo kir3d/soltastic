@@ -1,0 +1,61 @@
+import type { ParsedServerReply } from '../types';
+
+export function parseServerReply(text: string): ParsedServerReply | null {
+  if (!text.startsWith('ST,')) return null;
+
+  const fields: Record<string, string> = {};
+  const parts = text.split(',').slice(1);
+
+  for (const part of parts) {
+    const idx = part.indexOf('=');
+    if (idx <= 0) continue;
+    fields[part.slice(0, idx)] = part.slice(idx + 1);
+  }
+
+  if (fields.e) {
+    return {
+      error: fields.e,
+      solBalanceText: fields.S ?? '0',
+      usdcBalanceText: fields.C ?? '0'
+    };
+  }
+
+  if (!fields.S || !fields.C || !fields.a || !fields.v || !fields.p) {
+    return null;
+  }
+
+  return {
+    solBalanceText: fields.S,
+    usdcBalanceText: fields.C,
+    nonceAccountAddress: fields.a,
+    nonceValue: fields.v,
+    serverFeeAddress: fields.p
+  };
+}
+
+export function parseTxHashReply(text: string): string | null {
+  if (!text.startsWith('ST,')) return null;
+
+  let txHash = text.slice(3).trim();
+  txHash = txHash.replace(/^tx_hash=/, '').replace(/^h=/, '').trim();
+  txHash = txHash.replace(/^['"]|['"]$/g, '');
+
+  // Final tx hash reply is ST,<base58_signature>.
+  // Client submit echo has commas: ST,<receiver>,<token>,<amount>,<signature>.
+  if (!txHash || txHash.includes(',') || txHash.includes('=')) return null;
+  if (!/^[1-9A-HJ-NP-Za-km-z]{64,110}$/.test(txHash)) return null;
+
+  return txHash;
+}
+
+export function txErrorText(code: string): string {
+  const map: Record<string, string> = {
+    '3': 'Server failed to send the transaction',
+    '4': 'Server does not know the mesh sender, init is required',
+    '5': 'Nonce not found or expired',
+    '6': 'Invalid client signature',
+    '7': 'Transaction not confirmed or timed out',
+    '8': 'Transaction failed on-chain'
+  };
+  return map[String(code)] ?? `Server error e=${code}`;
+}

@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Soltastic",
+    "slug": "soltastic-mobile-android",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "soltastic",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.soltastic.mobile",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
+      ]
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "Soltastic needs Bluetooth to connect to your Meshtastic node."
+        }
+      ],
+      "expo-camera"
+    ]
+  }
+}
