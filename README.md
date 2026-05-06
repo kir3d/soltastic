@@ -4,10 +4,10 @@
 # Soltastic
 **Solana transactions when mobile internet down.**
 
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
-[![License](https://img.shields.io/badge/license-MIT-blue)](#license)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#Docs)
+[![License](https://img.shields.io/badge/license-MIT-blue)](#License)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF)](#why-solana)
-[![Meshtastic](https://img.shields.io/badge/Meshtastic-LoRa-14F195)](#)
+[![Meshtastic](https://img.shields.io/badge/Meshtastic-LoRa-14F195)](#Docs)
 
 </div>
 
@@ -127,3 +127,6 @@ Contributions are welcome. Suggested flow:
 
 Please avoid committing real private keys, `.json` and `.env` files, generated build artifacts, or temporary files.
 
+## License
+
+Apache-2.0
