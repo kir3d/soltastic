@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 160" width="700" height="160" role="img">
+  <title>Soltastic protocol architecture</title>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .dv  { fill:#f0f3f6; stroke:#8b96a3; stroke-width:1.2; }
+    .sc  { fill:#d6dfe8; }
+    .inn { fill:#e2e7ec; }
+    .sl  { fill:#e8ecf0; stroke:#b0bac4; stroke-width:0.6; }
+    .tx  { fill:#1c2128; font-size:13px; font-weight:500; }
+    .tx2 { fill:#656d76; }
+    .ant { stroke:#4a5260; stroke-width:1.3; stroke-linecap:round; fill:none; }
+    .btn { fill:none; stroke:#8b96a3; stroke-width:0.9; }
+    .ln  { fill:none; }
+    @media (prefers-color-scheme: dark) {
+      .dv  { fill:#22272e; stroke:#768390; }
+      .sc  { fill:#1c2128; }
+      .inn { fill:#2d333b; }
+      .sl  { fill:#2d333b; stroke:#5a6472; }
+      .tx  { fill:#cdd9e5; }
+      .tx2 { fill:#768390; }
+      .ant { stroke:#cdd9e5; }
+      .btn { stroke:#768390; }
+    }
+  </style>
+
+  <!-- ── TRACKS ── -->
+  <line x1="86"  y1="87" x2="176" y2="87" stroke="#4A90D9" stroke-width="1.2" stroke-dasharray="4 3" class="ln"/>
+  <line x1="210" y1="87" x2="316" y2="87" stroke="#1D9E75" stroke-width="1.2" stroke-dasharray="4 3" class="ln"/>
+  <line x1="350" y1="87" x2="436" y2="87" stroke="#4A90D9" stroke-width="1.2" stroke-dasharray="4 3" class="ln"/>
+  <line x1="514" y1="87" x2="582" y2="87" stroke="#9945FF" stroke-width="1.2" stroke-dasharray="4 3" class="ln"/>
+
+  <!-- ── PROTOCOL LABELS ── -->
+  <text x="131" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="#4A90D9">BLE</text>
+  <text x="263" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="#1D9E75">LoRa</text>
+  <text x="393" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="#4A90D9">BLE</text>
+  <text x="548" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="#9945FF">Internet</text>
+
+  <!-- ══ SMARTPHONE  cx=66 ══ -->
+  <rect x="46" y="50" width="40" height="74" rx="8" class="dv"/>
+  <rect x="50" y="59" width="32" height="57" rx="3" class="sc"/>
+  <circle cx="66" cy="55" r="2.5" class="tx2"/>
+  <rect x="57" y="120" width="18" height="2" rx="1" class="tx2"/>
+
+  <!-- ══ T-ECHO 1  cx=193 — smaller body, antenna near left edge ══ -->
+  <!-- antenna: straight vertical, near left edge -->
+  <line x1="181" y1="58" x2="181" y2="36" class="ant"/>
+  <circle cx="181" cy="34" r="2.2" style="fill:#4a5260;stroke:none"/>
+  <!-- body 32×50 -->
+  <rect x="177" y="58" width="32" height="50" rx="5" class="dv"/>
+  <!-- display -->
+  <rect x="181" y="64" width="24" height="18" rx="2" class="sc"/>
+  <rect x="184" y="68" width="10" height="1.6" rx="0.8" class="tx2" opacity="0.45"/>
+  <rect x="184" y="72" width="16" height="1.6" rx="0.8" class="tx2" opacity="0.35"/>
+  <rect x="184" y="76" width="8"  height="1.6" rx="0.8" fill="#1D9E75" opacity="0.8"/>
+  <!-- 3 small round buttons -->
+  <circle cx="184" cy="97" r="3" class="btn"/>
+  <circle cx="193" cy="97" r="3" class="btn"/>
+  <circle cx="202" cy="97" r="3" class="btn"/>
+
+  <!-- ══ T-ECHO 2  cx=333 — same style ══ -->
+  <line x1="319" y1="58" x2="319" y2="36" class="ant"/>
+  <circle cx="319" cy="34" r="2.2" style="fill:#4a5260;stroke:none"/>
+  <rect x="315" y="58" width="32" height="50" rx="5" class="dv"/>
+  <rect x="319" y="64" width="24" height="18" rx="2" class="sc"/>
+  <rect x="322" y="68" width="10" height="1.6" rx="0.8" class="tx2" opacity="0.45"/>
+  <rect x="322" y="72" width="16" height="1.6" rx="0.8" class="tx2" opacity="0.35"/>
+  <rect x="322" y="76" width="8"  height="1.6" rx="0.8" fill="#1D9E75" opacity="0.8"/>
+  <circle cx="322" cy="97" r="3" class="btn"/>
+  <circle cx="331" cy="97" r="3" class="btn"/>
+  <circle cx="340" cy="97" r="3" class="btn"/>
+
+  <!-- ══ MACBOOK  cx=475 ══ -->
+  <!-- Lid: wide, thin, slight wedge look via two rects -->
+  <rect x="435" y="46" width="80" height="50" rx="6" class="dv"/>
+  <!-- Display bezel fill — very thin all around -->
+  <rect x="438" y="49" width="74" height="43" rx="3" class="sc"/>
+  <!-- Notch -->
+  <rect x="464" y="49" width="12" height="5" rx="2.5" class="dv"/>
+  <!-- Screen content hints -->
+  <rect x="443" y="60" width="28" height="2" rx="1" class="tx2" opacity="0.35"/>
+  <rect x="443" y="65" width="42" height="2" rx="1" class="tx2" opacity="0.28"/>
+  <rect x="443" y="70" width="20" height="2" rx="1" fill="#1D9E75" opacity="0.6"/>
+  <!-- Base: MacBook is very thin, wide, tapered -->
+  <!-- bottom body -->
+  <path d="M421 96 L529 96 L529 107 Q529 110 526 110 L424 110 Q421 110 421 107 Z" class="dv" stroke-width="1"/>
+  <!-- very subtle taper: slightly wider at hinge end -->
+  <!-- rubber feet line -->
+  <rect x="430" y="109" width="8"  height="2" rx="1" class="tx2" opacity="0.3"/>
+  <rect x="512" y="109" width="8"  height="2" rx="1" class="tx2" opacity="0.3"/>
+  <!-- Hinge line at top of base -->
+  <line x1="435" y1="97" x2="525" y2="97" stroke="#8b96a3" stroke-width="0.6" opacity="0.5"/>
+  <!-- Touchpad: large, centered, Force Touch style -->
+  <rect x="453" y="99" width="44" height="9" rx="2.5" class="inn" style="stroke:#8b96a3;stroke-width:0.6"/>
+
+  <!-- ══ SERVER RACK  cx=618 ══ -->
+  <!-- Rack enclosure — tall narrow box with prominent side ears -->
+  <!-- Main frame -->
+  <rect x="587" y="35" width="62" height="96" rx="3" class="dv"/>
+  <!-- Left rack ear -->
+  <rect x="578" y="35" width="10" height="96" rx="2" class="dv" style="stroke-width:1"/>
+  <!-- Right rack ear -->
+  <rect x="648" y="35" width="10" height="96" rx="2" class="dv" style="stroke-width:1"/>
+  <!-- Ear screw holes — 3 per ear -->
+  <circle cx="583" cy="50"  r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <circle cx="583" cy="83"  r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <circle cx="583" cy="116" r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <circle cx="653" cy="50"  r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <circle cx="653" cy="83"  r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <circle cx="653" cy="116" r="2" fill="#c8d0d8" style="stroke:#8b96a3;stroke-width:0.7"/>
+  <!-- Inner panel -->
+  <rect x="590" y="38" width="56" height="90" rx="2" class="inn"/>
+
+  <!-- 1U server units — each h=11, gap=2, starting y=40 -->
+  <!-- Row helper: power LED circle left, drive slots centre, status LED right -->
+
+  <!-- u1 y=40 -->
+  <rect x="592" y="40" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="45.5" r="2" fill="#9945FF" opacity="0.75"/>
+  <rect x="602" y="42.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="42.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="42.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="42.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="45.5" r="1.6" fill="#14F195" opacity="0.9"/>
+
+  <!-- u2 y=53 -->
+  <rect x="592" y="53" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="58.5" r="2" fill="#9945FF" opacity="0.75"/>
+  <rect x="602" y="55.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="55.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="55.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="55.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="58.5" r="1.6" fill="#14F195" opacity="0.9"/>
+
+  <!-- u3 y=66 -->
+  <rect x="592" y="66" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="71.5" r="2" fill="#9945FF" opacity="0.5"/>
+  <rect x="602" y="68.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="68.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="68.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="68.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="71.5" r="1.6" fill="#9945FF" opacity="0.7"/>
+
+  <!-- u4 y=79 -->
+  <rect x="592" y="79" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="84.5" r="2" fill="#9945FF" opacity="0.75"/>
+  <rect x="602" y="81.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="81.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="81.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="81.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="84.5" r="1.6" fill="#14F195" opacity="0.9"/>
+
+  <!-- u5 y=92 -->
+  <rect x="592" y="92" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="97.5" r="2" fill="#9945FF" opacity="0.75"/>
+  <rect x="602" y="94.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="94.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="94.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="94.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="97.5" r="1.6" fill="#9945FF" opacity="0.5"/>
+
+  <!-- u6 y=105 -->
+  <rect x="592" y="105" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="110.5" r="2" fill="#9945FF" opacity="0.75"/>
+  <rect x="602" y="107.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="107.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="107.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="107.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="110.5" r="1.6" fill="#14F195" opacity="0.9"/>
+
+  <!-- u7 y=118 -->
+  <rect x="592" y="118" width="52" height="11" rx="1.5" class="sl"/>
+  <circle cx="597" cy="123.5" r="2" fill="#9945FF" opacity="0.5"/>
+  <rect x="602" y="120.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="607" y="120.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="612" y="120.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <rect x="617" y="120.5" width="4" height="6" rx="0.8" class="inn" style="stroke:#9ea8b3;stroke-width:0.5"/>
+  <circle cx="635" cy="123.5" r="1.6" fill="#9945FF" opacity="0.7"/>
+
+  <!-- ── DEVICE LABELS ── -->
+  <text x="66"  y="145" text-anchor="middle" class="tx">Client</text>
+  <text x="193" y="145" text-anchor="middle" class="tx">Meshtastic</text>
+  <text x="331" y="145" text-anchor="middle" class="tx">Meshtastic</text>
+  <text x="475" y="145" text-anchor="middle" class="tx">Relay-Server</text>
+  <text x="618" y="145" text-anchor="middle" class="tx">RPC Node</text>
+</svg>

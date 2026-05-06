@@ -68,7 +68,18 @@ The project contains two parts:
 - **Client** - a local browser application, a bridge between the wallet and the Meshtastic BLE node.
 - **Server** - A relay server application that listens on the Meshtastic channel and communicates with Solana RPC nodes for client requests.
 
-<img src="assets/architecture.svg" alt="Architecture" width="100%">
+<img src="assets/architecture_mobile.svg" alt="Architecture" width="100%">
+
+| # | From | Message | To | Protocol |
+|---|------|---------|----|----------|
+| 1 | Client | `init` | Server | 🟢 LoRa |
+| 2 | Server | `get balances` and create `Durable Nonce` | RPC Node | 🟣 Internet |
+| 3 | RPC Node | Return `balances` and `Durable Nonce` Value | Server| 🟣 Internet |
+| 4 | Server | Return `balances` and `Durable Nonce` Value | Client | 🟢 LoRa |
+| 5 | Clent | `meta-data` and `signature` | Server | 🟢 LoRa |
+| 6 | Server | `transaction` | RPC Node | 🟣 Internet |
+| 7 | RPC Node | `tx hash` | Server | 🟣 Internet |
+| 8| Server |  `tx hash` | Client | 🟢 LoRa |
 
 > [!IMPORTANT]
 > **Privacy First:** The server never receives the user's private key. All signing happens locally on the client device.
