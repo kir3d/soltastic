@@ -20,7 +20,14 @@ When internet access fails, users lose the ability to move value, accept payment
 
 Sky Business research shows that UK SMEs affected by running out of mobile data lose over **£3,400 per year on average** in missed revenue, with **56%** of affected businesses reporting lost sales, bookings, or opportunities. [Sky Group](https://skygroup.sky/article/fear-of-running-out-of-mobile-data-foro-is-a-real-issue-for-uk-businesses-as-companies-lose-over-3-400-a-year)
 
+
 In remote areas, disaster zones, fieldwork, crowded festivals, network outages, or censorship-resistant environments, this problem becomes even more important. A user may still have a wallet and a signed Solana transaction, but no internet connection to broadcast it.
+
+<div align="center">
+<img src="https://e3.365dm.com/20/04/2048x1152/skynews-facebook-5g-mast_4970203.jpg?20200416171254 alt="Soltastic" width="100%" />
+</div>
+
+[© Sky News](https://news.sky.com/story/coronavirus-concern-after-facebook-groups-call-for-harassment-of-5g-engineers-11974088)
 
 
 ---
