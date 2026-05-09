@@ -1,22 +1,4 @@
-import {
-  PublicKey } from '@solana/web3.js'; import React,
-  { useCallback,
-  useRef,
-  useState,
-  useEffect } from 'react'; import {   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  TouchableOpacity,
-} from 'react-native';
+import { PublicKey } from '@solana/web3.js'; import React, { useCallback, useRef, useState, useEffect } from 'react'; import {   ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View, TouchableOpacity, } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -1364,6 +1346,7 @@ export default function App() {
 
                 <Text style={styles.muted}>Service fee: {SERVICE_FEE_SOL} SOL</Text>
               </View>
+
               <View style={styles.addressRow}>
                 <TextInput
                   value={receiverAddress}
@@ -1374,27 +1357,16 @@ export default function App() {
                   autoCorrect={false}
                   style={[styles.input, styles.addressInput]}
                 />
-
-                <Pressable
-                  onPress={pasteReceiverPress}
-                  style={({ pressed }) => [
-                    styles.squareIconButton,
-                    pressed ? styles.buttonPressed : null,
-                  ]}
-                  accessibilityLabel="Paste receiver address"
-                >
-                  <Ionicons name="clipboard-outline" size={24} color="#071019" />
-                </Pressable>
-
                 <Pressable
                   onPress={openQrScanner}
+                  disabled={busy}
                   style={({ pressed }) => [
-                    styles.squareIconButton,
-                    pressed ? styles.buttonPressed : null,
+                    styles.qrButton,
+                    busy ? styles.buttonDisabled : null,
+                    pressed && !busy ? styles.buttonPressed : null,
                   ]}
-                  accessibilityLabel="Scan receiver QR code"
                 >
-                  <Ionicons name="qr-code-outline" size={25} color="#071019" />
+                  <Text style={styles.qrButtonText}>Scan QR</Text>
                 </Pressable>
               </View>
 
@@ -1673,14 +1645,11 @@ minHeight: 54,
   },
   addressRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 10,
+    gap: 8,
+    alignItems: 'center'
   },
   addressInput: {
-    flex: 1,
-    minWidth: 0,
-    marginTop: 0,
+    flex: 1
   },
   qrButton: {
     minHeight: 44,
@@ -2018,9 +1987,8 @@ minHeight: 54,
     flex: 3,
   },
   squareIconButton: {
-    width: 54,
-    height: 54,
-    flexShrink: 0,
+    width: 56,
+    height: 56,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
