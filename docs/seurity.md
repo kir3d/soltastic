@@ -729,3 +729,15 @@ Recommended:
 Soltastic is an experimental devnet prototype.
 
 It should not be used with real funds until the protocol, transaction construction, Durable Nonce lifecycle, gateway implementation, and client signing flow have been reviewed and tested for production use.
+
+---
+
+## Recommended companion docs:
+
+```text
+docs/
+├── architecture.md
+├── protocol.md
+├── quickstart.md
+└── security.md
+```

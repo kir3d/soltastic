@@ -76,7 +76,7 @@ Example:
 
 [Protocol](docs/ptotocol.md)
 
-[Setup-n-Run](docs/setup-n-run.md)
+[Quickstart](docs/qucikstart.md)
 
 [Security](docs/security.md) 
 

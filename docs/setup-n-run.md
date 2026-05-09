@@ -1223,8 +1223,6 @@ For Android demo also confirm:
 docs/
 ├── architecture.md
 ├── protocol.md
-├── setup-and-run.md
-├── android.md
+├── quickstart.md
 └── security.md
 ```
-

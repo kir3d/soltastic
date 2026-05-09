@@ -689,6 +689,6 @@ The result is a practical architecture for relaying Solana transactions when the
 docs/
 ├── architecture.md
 ├── protocol.md
-├── setup-and-run.md
+├── quickstart.md
 └── security.md
 ```

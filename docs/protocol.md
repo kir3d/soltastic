@@ -598,6 +598,6 @@ Soltastic protocol does not attempt to provide:
 docs/
 ├── architecture.md
 ├── protocol.md
-├── setup-and-run.md
+├── quickstart.md
 └── security.md
 ```
