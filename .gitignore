@@ -1,4 +1,4 @@
-server/key
+server/keys/*
 server/node_modules/
 server/data/nonce-store.json
 server/data/mesh-wallet-store.json
@@ -6,4 +6,5 @@ client/node_modules/
 .env
 *.pem
 *.key
+*json
 .DS_Store
