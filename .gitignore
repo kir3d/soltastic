@@ -6,5 +6,4 @@ client/node_modules/
 .env
 *.pem
 *.key
-*json
 .DS_Store
