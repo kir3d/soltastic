@@ -523,7 +523,7 @@ function extractTxHashFromMessage(message: string | null | undefined): string | 
 }
 
 
-const STORAGE_WALLET_SESSION_KEY = 'soltastic.walletSession.v1';
+const STORAGE_WALLET_SESSION_KEY = 'soltastic.walletSession.v6.chain-only-devnet';
 const STORAGE_BLE_DEVICE_KEY = 'soltastic.bleDevice.v1';
 
 type StoredBleDevice = {
@@ -785,6 +785,7 @@ export default function App() {
       addLog('Auto BLE scan starting...');
       Promise.resolve(openQrScanner()).catch((e) => {
         const msg = typeof errorToText === 'function' ? errorToText(e) : String(e);
+        setBusy(false);
         addLog(`Auto BLE scan failed: ${msg}`, 'err');
       });
     }, 700);
@@ -886,6 +887,7 @@ export default function App() {
       setStatus('Meshtastic node connected.');
     } catch (e) {
       const msg = errorToText(e);
+      setBusy(false);
       addLog(`BLE connection error: ${msg}`, 'err');
       Alert.alert('BLE connection error', msg);
     } finally {
@@ -895,6 +897,7 @@ export default function App() {
 
 
   const connectBleDevicePress = useCallback(async (item: BleDeviceInfo) => {
+    addLog(`BLE device tapped: ${((item as any)?.name ?? (item as any)?.localName ?? (item as any)?.id ?? 'unknown')}`);
     if (busy || bleScanning || meshConnected) return;
 
     setSelectedBleDeviceId(item.id);
@@ -1017,6 +1020,7 @@ export default function App() {
       } catch (e) {
         if (!cancelled) {
           const msg = errorToText(e);
+          setBusy(false);
           addLog(`BLE restore failed: ${msg}`, 'err');
           addLog('BLE auto scan starting...');
           try {
@@ -1028,6 +1032,7 @@ export default function App() {
             setSelectedBleDeviceId(devices[0]?.id ?? null);
           } catch (scanError) {
             if (!cancelled) {
+              setBusy(false);
               addLog(`BLE auto scan failed: ${errorToText(scanError)}`, 'err');
             }
           }
@@ -1309,7 +1314,6 @@ export default function App() {
                         onPress={() => {
                           void connectBleDevicePress(item);
                         }}
-                        disabled={busy || bleScanning}
                         style={({ pressed }) => [
                           styles.deviceItemCompact,
                           selected ? styles.deviceItemSelected : null,

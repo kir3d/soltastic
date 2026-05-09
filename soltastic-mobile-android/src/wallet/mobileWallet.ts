@@ -9,12 +9,20 @@ export type WalletSession = {
   authToken: string;
 };
 
-async function authorize(wallet: Web3MobileWallet): Promise<WalletSession> {
-  const result = await wallet.authorize({
-    chain: CHAIN,
+function buildAuthorizeParams(authToken?: string) {
+  return {
     identity: APP_IDENTITY,
-    features: ['solana:signTransactions']
-  } as any);
+    chain: CHAIN,
+    features: ['solana:signTransactions'],
+    ...(authToken ? { auth_token: authToken } : {})
+  } as any;
+}
+
+async function authorizeWallet(
+  wallet: Web3MobileWallet,
+  authToken?: string
+): Promise<WalletSession> {
+  const result = await wallet.authorize(buildAuthorizeParams(authToken));
 
   const account = result.accounts?.[0];
   if (!account) throw new Error('Wallet did not return an account');
@@ -26,7 +34,7 @@ async function authorize(wallet: Web3MobileWallet): Promise<WalletSession> {
 }
 
 export async function connectWallet(): Promise<WalletSession> {
-  return await transact(async (wallet) => authorize(wallet));
+  return await transact(async (wallet) => authorizeWallet(wallet));
 }
 
 export async function reconnectWallet(savedSession: WalletSession): Promise<WalletSession> {
@@ -34,20 +42,9 @@ export async function reconnectWallet(savedSession: WalletSession): Promise<Wall
     throw new Error('No saved wallet auth token');
   }
 
-  return await transact(async (wallet) => {
-    const result = await wallet.reauthorize({
-      auth_token: savedSession.authToken,
-      identity: APP_IDENTITY
-    });
-
-    const account = result.accounts?.[0];
-    if (!account) throw new Error('Wallet did not return an account');
-
-    return {
-      address: walletAccountToBase58(account),
-      authToken: result.auth_token
-    };
-  });
+  return await transact(async (wallet) =>
+    authorizeWallet(wallet, savedSession.authToken)
+  );
 }
 
 export async function disconnectWallet(authToken: string): Promise<void> {
@@ -65,22 +62,14 @@ export async function signTransactionWithWallet(
 
     if (session?.authToken) {
       try {
-        const result = await wallet.reauthorize({
-          auth_token: session.authToken,
-          identity: APP_IDENTITY
-        });
-        const account = result.accounts?.[0];
-        session = {
-          address: account ? walletAccountToBase58(account) : session.address,
-          authToken: result.auth_token
-        };
+        session = await authorizeWallet(wallet, session.authToken);
       } catch {
         session = null;
       }
     }
 
     if (!session) {
-      session = await authorize(wallet);
+      session = await authorizeWallet(wallet);
     }
 
     const [signed] = await wallet.signTransactions({
