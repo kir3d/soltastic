@@ -46,6 +46,9 @@ You can use the Meshtastic web client:
 
 https://client.meshtastic.org/
 
+<img width="1780" height="844" alt="Screenshot 2026-05-09 at 19 21 35" src="https://github.com/user-attachments/assets/bd9f9ba7-ca1a-40db-bf6e-4376d2888c03" />
+
+
 On **both Meshtastic nodes** setup private channel:
 
 1. Open **Channels**.
