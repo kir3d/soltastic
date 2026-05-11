@@ -55,18 +55,24 @@ Using local LoRa-based mesh networks as the last mile, a relay server for transm
 
 ## Demo
 
-Add demo assets before hackathon submission:
+ **Screenshots:** 
+<table>
+  <tr>
+    <td><img src="assets/screenshot-android.jpg" width="200"></td>
+    <td><img src="assets/screenshot-server.jpg" width="600"></td>
+  </tr>
+</table>
 
-- **Live demo:** `https://<your-github-pages-or-demo-url>`
-- **Video walkthrough:** `https://<your-video-url>`
-- **Screenshots:** put images in `assets/` and reference them below.
 
-Example:
+ **Live demo:** 
 
-```md
-![Soltastic client](assets/client-screenshot.png)
-![Soltastic server](assets/server-screenshot.png)
-```
+<a href="https://youtu.be/Yei7QZdw6R4">
+  <img src="https://img.youtube.com/vi/Yei7QZdw6R4/maxresdefault.jpg" width="600" alt="Soltastic demo"/>
+</a>
+
+[click on image for play youtube video](https://youtu.be/Yei7QZdw6R4)
+
+
 
 ---
 
