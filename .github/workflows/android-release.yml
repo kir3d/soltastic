@@ -37,7 +37,7 @@ jobs:
         run: |
           cd soltastic-mobile-android/android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --stacktrace
+          ./gradlew assembleRelease --info 2>&1 | tail -100
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
