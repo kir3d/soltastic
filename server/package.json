@@ -1,5 +1,6 @@
 {
   "name": "server",
+  "version": "0.0.1",
   "type": "module",
   "private": true,
   "scripts": {
@@ -21,5 +22,10 @@
     "tsx": "latest",
     "typescript": "latest",
     "vite": "latest"
+  },
+  "scripts": {
+    "dev": "node app.js",
+    "build": "tsc",
+    "start": "node dist/index.js"
   }
 }
