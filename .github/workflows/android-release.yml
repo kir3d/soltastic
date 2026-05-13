@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,6 +23,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install JS dependencies
+        run: |
+          cd soltastic-mobile-android
+          npm install
 
       - name: Build APK
         run: |
