@@ -39,7 +39,11 @@ jobs:
         run: |
           cd soltastic-mobile-android/android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --info 2>&1 | tail -100
+          ./gradlew assembleRelease
+
+      - name: Check APK exists
+        run: |
+          ls -la soltastic-mobile-android/android/app/build/outputs/apk/release/
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
