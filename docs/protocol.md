@@ -1,603 +1,1342 @@
-# Soltastic Protocol
+# Soltastic Protocol v0.1
 
-Soltastic uses Meshtastic / LoRa as a low-bandwidth transport layer for signed Solana transactions.
+## 1. Overview
 
-This document describes the current prototype protocol and the planned binary protocol direction.
+Soltastic uses a compact binary protocol for sending Solana-related requests over Meshtastic mesh networks.
 
----
-
-## Protocol goals
-
-Soltastic protocol is designed around five goals:
-
-1. Keep LoRa messages compact.
-2. Never expose the user's private key.
-3. Use Solana as the only settlement layer.
-4. Treat mesh delivery as transport, not finality.
-5. Return a confirmed Solana transaction signature to the client.
-
-Soltastic is not a blockchain, token, validator network, mining system, or offline consensus protocol.
-
-> Meshtastic is not the blockchain. It is the radio courier.
+The protocol is designed for small payloads, low-bandwidth radio links, and unreliable delivery. Messages may be split into chunks when they exceed the maximum frame size.
 
 ---
 
-## Current prototype status
+## 2. General Rules
 
-The current prototype uses a short text protocol for easier debugging.
+A Soltastic binary message is transmitted as a Meshtastic payload.
 
-This format is temporary. The production direction is a compact binary payload sent through a private Meshtastic application port.
-
-Current prototype settings:
-
-| Setting | Value |
-|---|---|
-| Message prefix | `ST` |
-| Meshtastic channel slot | `7` |
-| Transport | Meshtastic text message |
-| Solana network | Devnet |
-| Settlement | Solana confirmation |
-| Finality source | Solana, not mesh delivery |
-
----
-
-## Actors
-
-### Client
-
-The client is the user-facing application.
-
-It can be either:
-
-- local browser version;
-- Android smartphone version.
-
-The client is responsible for:
-
-- connecting to the user's Solana wallet;
-- connecting to a Meshtastic node;
-- sending init requests;
-- receiving nonce/session data;
-- building the Solana transaction locally;
-- asking the wallet to sign;
-- sending transaction data over the mesh;
-- displaying final status and confirmed transaction signature.
-
-The client never sends a private key.
-
-### Mesh Gateway
-
-The Mesh Gateway is an internet-connected relay node.
-
-It is responsible for:
-
-- receiving Soltastic messages over Meshtastic;
-- mapping mesh sender IDs to wallet sessions;
-- checking wallet balances;
-- creating or preparing Durable Nonce state;
-- reconstructing the expected transaction;
-- verifying the wallet signature;
-- submitting the transaction to Solana RPC;
-- waiting for confirmation;
-- returning the result over the mesh.
-
-The gateway is not a Solana validator and does not provide consensus.
-
----
-
-## Transaction lifecycle
+If a binary message is larger than:
 
 ```text
-1. Client connects wallet
-2. Client connects Meshtastic node
-3. Client sends init request over mesh
-4. Gateway checks wallet and prepares Durable Nonce
-5. Gateway replies with balance + nonce data
-6. Client builds transaction locally
-7. Wallet signs transaction locally
-8. Client sends signed transaction data over mesh
-9. Gateway reconstructs and verifies the transaction
-10. Gateway submits transaction to Solana RPC
-11. Gateway waits for confirmation
-12. Gateway returns confirmed tx signature over mesh
+170 bytes
 ```
 
-A transaction is complete only after Solana confirms it.
+it must be split into chunks.
 
-Mesh delivery alone is not settlement.
+All integer values are encoded as:
+
+```text
+little-endian
+```
+
+All Solana addresses are encoded as raw bytes:
+
+```text
+Solana public key        = 32 bytes
+Token mint address       = 32 bytes
+Durable nonce account    = 32 bytes
+Durable nonce value      = 32 bytes
+Ed25519 signature        = 64 bytes
+Transaction signature    = 64 bytes
+```
+
+All balances and token amounts are encoded as integer raw units:
+
+```text
+SOL balance       = u64 lamports
+SPL token balance = u64 raw token units
+```
+
+Examples:
+
+```text
+1 SOL  = 1_000_000_000 lamports
+1 USDC = 1_000_000 raw units, if decimals = 6
+```
 
 ---
 
-## Current text protocol
+## 3. Base Header
 
-All current prototype messages use the `ST` prefix.
-
-Messages are comma-separated UTF-8 text messages.
-
-### 1. Init request
-
-Sent by the client to the gateway.
+Every Soltastic binary frame starts with a fixed 8-byte header.
 
 ```text
-ST,init,<wallet_address>
+byte 0:     magic = 0x53
+byte 1:     protocol_version = 0x01
+byte 2:     message_type
+byte 3-6:   request_id u32
+byte 7:     chunk_info
+payload...
 ```
 
-Example:
+Header size:
 
 ```text
-ST,init,BX64tYBofmJM6PTWXtHjA8p8ij5dnzsqLXbgddaVmkom
+8 bytes
 ```
 
-Fields:
+Maximum frame size:
 
-| Field | Description |
-|---|---|
-| `ST` | Soltastic protocol prefix |
-| `init` | Init request type |
-| `<wallet_address>` | User's Solana wallet public key in base58 |
+```text
+170 bytes
+```
 
-Purpose:
+Maximum payload size per non-extended frame:
 
-- identifies the user's wallet;
-- lets the gateway check balances;
-- starts or refreshes the mesh sender ↔ wallet session;
-- asks the gateway to prepare Durable Nonce data.
+```text
+162 bytes
+```
+
+If `chunk_info = 0x01`, the frame uses extended chunk mode and contains one additional byte after `chunk_info`.
+
+Extended header:
+
+```text
+byte 0:     magic = 0x53
+byte 1:     protocol_version = 0x01
+byte 2:     message_type
+byte 3-6:   request_id u32
+byte 7:     chunk_info = 0x01
+byte 8:     extended_chunk_info
+payload...
+```
+
+Extended header size:
+
+```text
+9 bytes
+```
+
+Maximum payload size per extended frame:
+
+```text
+161 bytes
+```
 
 ---
 
-### 2. Init success response
+## 4. Magic Byte
 
-Sent by the gateway to the client.
-
-```text
-ST,S=<balance_sol>,C=<balance_usdc>,a=<nonce_account>,v=<nonce_value>,p=<server_fee_address>
-```
-
-Example:
+The first byte is always:
 
 ```text
-ST,S=1.2345,C=25.5,a=GBaiLdo36MkYfcrASC4ispbCGjDuKAJPnXDCCNv1kzyo,v=AxEQhxUf4Z9GSu6KGbSktrUCRwSFtKYUjeYJXuR87jfK,p=29ySgo67m9GJTGgJ111MDwvpfGPkUboUX9wk9My47ync
+0x53
 ```
 
-Fields:
+This is the ASCII character:
 
-| Field | Description |
-|---|---|
-| `S` | User SOL balance |
-| `C` | User USDC balance |
-| `a` | Durable Nonce account address |
-| `v` | Durable Nonce value |
-| `p` | Gateway service fee public key |
+```text
+S
+```
 
-Purpose:
-
-- gives the client enough data to build a Durable Nonce transaction;
-- tells the client where the gateway fee should be paid;
-- allows the user interface to display available balances.
+It identifies the payload as a Soltastic binary protocol message.
 
 ---
 
-### 3. Low balance response
-
-Sent by the gateway when the wallet does not have enough SOL for the flow.
+## 5. Protocol Version
 
 ```text
-ST,S=<balance_sol>,C=<balance_usdc>,e=1
+0x01 = Soltastic Binary Protocol v0.1
 ```
 
-Example:
+---
+
+## 6. Message Type
+
+`message_type` is a 1-byte field that defines the message payload format.
+
+---
+
+## 7. Request ID
 
 ```text
-ST,S=0.0004,C=0,e=1
+request_id: u32
+```
+
+`request_id` is generated by the sender of a new request.
+
+The response must use the same `request_id`.
+
+All chunks of the same multipart message must use the same `request_id`.
+
+`request_id` is used to link:
+
+```text
+request -> response
+multipart chunks -> one logical message
+NACK -> missing chunks of a specific message
+Execution Result -> a specific Send Token request
+```
+
+Recommended generation method:
+
+```text
+random u32
+```
+
+Example in browser JavaScript:
+
+```js
+const requestId = crypto.getRandomValues(new Uint32Array(1))[0];
+```
+
+A monotonic u32 counter is also acceptable, but a random u32 is safer after client restarts.
+
+---
+
+## 8. Chunk Info
+
+`chunk_info` is a 1-byte field.
+
+Single-frame message:
+
+```text
+0x00 = single chunk message
+```
+
+Extended chunk mode marker:
+
+```text
+0x01 = extended chunk mode
+```
+
+If `chunk_info = 0x01`, then the next byte is `extended_chunk_info`.
+
+For normal multipart messages:
+
+```text
+high 4 bits = chunk_count_minus_1
+low 4 bits  = chunk_index
+```
+
+Chunk indexing starts from zero, but examples are described in human-readable one-based form.
+
+Examples:
+
+```text
+0x00 = single chunk message
+
+0x10 = chunk 1 of 2
+0x11 = chunk 2 of 2
+
+0x20 = chunk 1 of 3
+0x21 = chunk 2 of 3
+0x22 = chunk 3 of 3
+
+0x70 = chunk 1 of 8
+0x77 = chunk 8 of 8
+```
+
+Normal compact chunk mode supports:
+
+```text
+2 to 8 chunks
+```
+
+Invalid compact values:
+
+```text
+0x02..0x0F = invalid
+low nibble > high nibble = invalid
+```
+
+---
+
+## 9. Extended Chunk Info
+
+Extended chunk mode is used when the message requires more chunks than compact chunk mode can represent.
+
+If:
+
+```text
+chunk_info = 0x01
+```
+
+then the next byte is:
+
+```text
+extended_chunk_info
+```
+
+`extended_chunk_info` uses the same encoding principle:
+
+```text
+high 4 bits = chunk_count_minus_1
+low 4 bits  = chunk_index
+```
+
+Extended mode supports up to:
+
+```text
+16 chunks
+```
+
+Examples:
+
+```text
+chunk_info = 0x01
+extended_chunk_info = 0x80 = chunk 1 of 9
+extended_chunk_info = 0x88 = chunk 9 of 9
+
+chunk_info = 0x01
+extended_chunk_info = 0xF0 = chunk 1 of 16
+extended_chunk_info = 0xFF = chunk 16 of 16
+```
+
+Extended mode should only be used when the message cannot fit into compact chunk mode.
+
+If a message cannot fit into 16 chunks, it must not be sent. The sender or receiver should return:
+
+```text
+message_too_large
+```
+
+---
+
+## 10. TokenRef
+
+`TokenRef` is used to identify tokens in balance requests and token transfers.
+
+```text
+0x0000 + mint address = raw mint address follows
+0x0001                = native SOL
+0x0002..0xFFFF        = token index from token registry
+```
+
+### 10.1 Native SOL
+
+```text
+token_ref: u16 = 0x0001
+```
+
+### 10.2 Indexed Token
+
+```text
+token_ref: u16 = token_index
+```
+
+The `token_index` comes from the local `token-registry.json`.
+
+### 10.3 Raw Mint Address
+
+```text
+token_ref:    u16 = 0x0000
+mint_address: 32 bytes
+```
+
+This is used for tokens that are not present in the local token registry.
+
+---
+
+## 11. Token Registry
+
+Client and server use a shared local JSON token registry.
+
+The registry may be generated from the Jupiter verified token list with an additional filter:
+
+```text
+holderCount > 1000
+```
+
+Each token receives a stable `u16` index.
+
+The protocol transmits:
+
+```text
+registry_version: u16
+```
+
+Important rule:
+
+```text
+One registry_version must always correspond to one exact token-registry.json file.
+The order of token indexes must never be changed inside the same registry_version.
+```
+
+If the client receives an unsupported `registry_version`, it should either update its token registry or use raw mint mode.
+
+---
+
+## 12. Message Types
+
+```text
+0   Reserved
+
+1   Init request: balance + durable nonce request
+2   Init response: durable nonce + main balances
+
+3   Token balance request
+4   Token balance response
+
+5   Send token request
+
+6-9 Reserved
+
+10  Execution result
+
+11  Non-zero indexed token list request
+12  Non-zero indexed token list response
+
+13  Non-indexed token list request
+14  Non-indexed token list response
+
+15-249 Reserved
+
+250 ACK
+251 NACK
+252 Error
+253 Ping
+254 Pong
+255 Reserved
+```
+
+---
+
+## 13. Message Type 1 — Init Request
+
+Requests SOL balance, USDC balance, other token count, and a durable nonce.
+
+Direction:
+
+```text
+Client -> Server
+```
+
+Payload:
+
+```text
+wallet_address: 32 bytes
+```
+
+Full payload:
+
+```text
+[wallet_address]
+```
+
+The server uses this wallet address to:
+
+```text
+1. Check SOL balance
+2. Check USDC balance
+3. Count other non-zero token balances
+4. Create or assign a durable nonce account
+5. Return Message Type 2
+```
+
+---
+
+## 14. Message Type 2 — Init Response
+
+Response to Init Request.
+
+Direction:
+
+```text
+Server -> Client
+```
+
+Payload:
+
+```text
+session_id:          u32
+dn_account:          32 bytes
+dn_value:            32 bytes
+server_fee_wallet:   32 bytes
+registry_version:    u16
+sol_balance:         u64
+usdc_balance:        u64
+other:               u8
+```
+
+Full payload:
+
+```text
+[session_id]
+[dn_account]
+[dn_value]
+[server_fee_wallet]
+[registry_version]
+[sol_balance]
+[usdc_balance]
+[other]
+```
+
+### session_id
+
+```text
+u32
+```
+
+Session identifier issued by the server.
+
+All later client requests must include this `session_id`.
+
+### dn_account
+
+```text
+32 bytes
+```
+
+Durable nonce account address.
+
+### dn_value
+
+```text
+32 bytes
+```
+
+Durable nonce value.
+
+### server_fee_wallet
+
+```text
+32 bytes
+```
+
+Server wallet address for relay/server fee payment.
+
+### registry_version
+
+```text
+u16
+```
+
+Token registry version used by the server.
+
+### sol_balance
+
+```text
+u64 lamports
+```
+
+Native SOL balance.
+
+### usdc_balance
+
+```text
+u64 raw units
+```
+
+USDC balance in raw token units.
+
+### other
+
+```text
+u8
+```
+
+Number of other tokens with non-zero balance, excluding SOL and USDC.
+
+If the user has more than 254 other tokens:
+
+```text
+other = 255
 ```
 
 Meaning:
 
-- the wallet was recognized;
-- balances were checked;
-- SOL balance is below the required minimum;
-- client should not continue to transaction signing.
+```text
+255 = 254 or more other non-zero tokens
+```
 
 ---
 
-### 4. Transaction request
+## 15. Message Type 3 — Token Balance Request
 
-Sent by the client to the gateway after local wallet signing.
+Requests the balance of a specific token.
 
-Current prototype format:
+Direction:
 
 ```text
-ST,<receiver>,<token>,<amount>,<signature>
+Client -> Server
+```
+
+Payload:
+
+```text
+session_id: u32
+token_ref:  TokenRef
+```
+
+For native SOL:
+
+```text
+session_id: u32
+token_ref:  0x0001
+```
+
+For indexed token:
+
+```text
+session_id: u32
+token_ref:  u16
+```
+
+For raw mint:
+
+```text
+session_id:   u32
+token_ref:    0x0000
+mint_address: 32 bytes
+```
+
+---
+
+## 16. Message Type 4 — Token Balance Response
+
+Returns the balance of a specific token.
+
+Direction:
+
+```text
+Server -> Client
+```
+
+Payload:
+
+```text
+session_id: u32
+token_ref:  TokenRef
+balance:    u64
+```
+
+For native SOL:
+
+```text
+session_id: u32
+token_ref:  0x0001
+balance:    u64 lamports
+```
+
+For indexed token:
+
+```text
+session_id: u32
+token_ref:  u16
+balance:    u64 raw units
+```
+
+For raw mint:
+
+```text
+session_id:   u32
+token_ref:    0x0000
+mint_address: 32 bytes
+balance:      u64 raw units
+```
+
+---
+
+## 17. Message Type 5 — Send Token Request
+
+Requests token transfer execution.
+
+Direction:
+
+```text
+Client -> Server
+```
+
+Payload:
+
+```text
+session_id:        u32
+token_ref:         TokenRef
+recipient_address: 32 bytes
+amount:            u64
+memo_len:          u8
+memo:              memo_len bytes
+signature:         64 bytes
+```
+
+For native SOL:
+
+```text
+session_id:        u32
+token_ref:         0x0001
+recipient_address: 32 bytes
+amount:            u64 lamports
+memo_len:          u8
+memo:              memo_len bytes
+signature:         64 bytes
+```
+
+For indexed token:
+
+```text
+session_id:        u32
+token_ref:         u16
+recipient_address: 32 bytes
+amount:            u64 raw units
+memo_len:          u8
+memo:              memo_len bytes
+signature:         64 bytes
+```
+
+For raw mint:
+
+```text
+session_id:        u32
+token_ref:         0x0000
+mint_address:      32 bytes
+recipient_address: 32 bytes
+amount:            u64 raw units
+memo_len:          u8
+memo:              memo_len bytes
+signature:         64 bytes
+```
+
+### Memo
+
+```text
+memo_len: u8
+memo:     UTF-8 bytes
+```
+
+If memo is not used:
+
+```text
+memo_len = 0
+```
+
+Recommended memo limit:
+
+```text
+memo_len <= 64
+```
+
+The actual allowed memo length depends on the total message size and chunking limit.
+
+If `memo_len > 0`, the memo must be included in the exact Solana transaction message signed by the client.
+
+### Signature Rule
+
+The client signs the exact Solana transaction message locally.
+
+The server must rebuild the exact same transaction message byte-for-byte.
+
+If the rebuilt message differs from the message signed by the client, the signature must be considered invalid.
+
+The server must not change:
+
+```text
+recipient
+amount
+token
+memo
+durable nonce
+server fee
+instruction order
+```
+
+after the client signs the transaction.
+
+---
+
+## 18. Message Type 10 — Execution Result
+
+Returns the result of a transaction execution.
+
+Direction:
+
+```text
+Server -> Client
+```
+
+Payload:
+
+```text
+session_id:    u32
+status:        u8
+tx_signature:  64 bytes optional
+error_code:    u16 optional
+```
+
+### status
+
+```text
+0  = accepted_by_server
+1  = sent_to_rpc
+2  = confirmed
+3  = finalized
+4  = failed
+5  = simulation_failed
+6  = signature_invalid
+7  = insufficient_funds
+8  = durable_nonce_invalid
+9  = unsupported_token
+10 = message_too_large
+11 = internal_server_error
+```
+
+If the transaction was successfully sent to Solana, the server returns:
+
+```text
+tx_signature: 64 bytes
+```
+
+This is the Solana transaction signature, not a blockhash.
+
+If an error occurred, the server may return:
+
+```text
+error_code: u16
+```
+
+---
+
+## 19. Message Type 11 — Non-Zero Indexed Token List Request
+
+Requests a list of indexed tokens with non-zero balances.
+
+Direction:
+
+```text
+Client -> Server
+```
+
+Payload:
+
+```text
+session_id: u32
+```
+
+---
+
+## 20. Message Type 12 — Non-Zero Indexed Token List Response
+
+Returns indexed tokens with non-zero balances and a count of non-indexed non-zero tokens.
+
+Direction:
+
+```text
+Server -> Client
+```
+
+Payload:
+
+```text
+session_id:           u32
+indexed_count:        u8
+indexed_tokens:       [u16] * indexed_count
+other_nonzero_count:  u16
+```
+
+Full format:
+
+```text
+[session_id]
+[indexed_count]
+[token_index_1]
+[token_index_2]
+...
+[token_index_N]
+[other_nonzero_count]
+```
+
+### indexed_count
+
+```text
+u8
+```
+
+Number of indexed tokens with non-zero balances.
+
+### indexed_tokens
+
+```text
+u16 * indexed_count
+```
+
+Token indexes from the local token registry.
+
+### other_nonzero_count
+
+```text
+u16
+```
+
+Number of non-indexed tokens with non-zero balances.
+
+If the response does not fit into 170 bytes, it must be split into chunks.
+
+---
+
+## 21. Message Type 13 — Non-Indexed Token List Request
+
+Requests a paginated list of non-indexed tokens with non-zero balances.
+
+Direction:
+
+```text
+Client -> Server
+```
+
+Payload:
+
+```text
+session_id: u32
+offset:     u16
+limit:      u8
+```
+
+### offset
+
+```text
+u16
+```
+
+The first non-indexed token position to return.
+
+### limit
+
+```text
+u8
+```
+
+Maximum number of tokens to return.
+
+The server may return fewer tokens if the response would exceed the frame or chunking limit.
+
+---
+
+## 22. Message Type 14 — Non-Indexed Token List Response
+
+Returns a paginated list of non-indexed tokens with non-zero balances.
+
+Direction:
+
+```text
+Server -> Client
+```
+
+Payload:
+
+```text
+session_id:       u32
+offset:           u16
+nonindexed_count: u8
+
+Repeated nonindexed_count times:
+  mint_address: 32 bytes
+  decimals:     u8
+  ticker_len:   u8
+  ticker:       ticker_len bytes
+```
+
+Full format:
+
+```text
+[session_id]
+[offset]
+[nonindexed_count]
+
+[mint_address_1]
+[decimals_1]
+[ticker_len_1]
+[ticker_1]
+
+[mint_address_2]
+[decimals_2]
+[ticker_len_2]
+[ticker_2]
+
+...
+```
+
+### mint_address
+
+```text
+32 bytes
+```
+
+SPL token mint address.
+
+### decimals
+
+```text
+u8
+```
+
+Token decimals.
+
+### ticker
+
+```text
+ticker_len: u8
+ticker:     UTF-8 bytes
+```
+
+Recommended maximum:
+
+```text
+ticker_len <= 12
+```
+
+If ticker is unknown:
+
+```text
+ticker_len = 0
+```
+
+---
+
+## 23. Message Type 250 — ACK
+
+Acknowledges successful receipt of a message.
+
+Direction:
+
+```text
+Client -> Server
+Server -> Client
+```
+
+Payload:
+
+```text
+acked_request_id: u32
+```
+
+---
+
+## 24. Message Type 251 — NACK
+
+Reports missing chunks.
+
+Direction:
+
+```text
+Client -> Server
+Server -> Client
+```
+
+Payload:
+
+```text
+request_id:     u32
+missing_bitmap: u16
+```
+
+### missing_bitmap
+
+Each bit represents a missing chunk.
+
+```text
+bit 0  = chunk 1 missing
+bit 1  = chunk 2 missing
+bit 2  = chunk 3 missing
+bit 3  = chunk 4 missing
+bit 4  = chunk 5 missing
+bit 5  = chunk 6 missing
+bit 6  = chunk 7 missing
+bit 7  = chunk 8 missing
+bit 8  = chunk 9 missing
+bit 9  = chunk 10 missing
+bit 10 = chunk 11 missing
+bit 11 = chunk 12 missing
+bit 12 = chunk 13 missing
+bit 13 = chunk 14 missing
+bit 14 = chunk 15 missing
+bit 15 = chunk 16 missing
 ```
 
 Example:
 
 ```text
-ST,9xQeWvG816bUx9EPjHmaT23yvVM2ZWp9W5LrYZKqKxY,SOL,0.01,5Yp...
+missing_bitmap = 0b0000000000000101
 ```
 
-Fields:
-
-| Field | Description |
-|---|---|
-| `ST` | Soltastic protocol prefix |
-| `<receiver>` | Receiver Solana address |
-| `<token>` | Token symbol, for example `SOL` or `USDC` |
-| `<amount>` | Transfer amount as a decimal string |
-| `<signature>` | User wallet signature |
-
-Gateway behavior:
-
-1. find the wallet session for the mesh sender;
-2. load nonce account and nonce value from session;
-3. reconstruct the exact expected transaction;
-4. verify the provided signature;
-5. submit the transaction to Solana RPC;
-6. wait for confirmation;
-7. return success or error response.
-
----
-
-### 5. Success response
-
-Sent by the gateway after Solana confirmation.
+Means:
 
 ```text
-ST,<tx_hash>
-```
-
-Example:
-
-```text
-ST,4xQeWvG816bUx9EPjHmaT23yvVM2ZWp9W5LrYZKqKxYk7n2...
-```
-
-The client should display this as the final confirmed transaction signature.
-
----
-
-### 6. Error response
-
-Sent by the gateway if the transaction cannot be completed.
-
-```text
-ST,e=<error_code>
-```
-
-Example:
-
-```text
-ST,e=6
-```
-
-Error codes:
-
-| Code | Meaning |
-|---|---|
-| `1` | Client SOL balance is below the required minimum |
-| `2` | Init or backend error |
-| `3` | Gateway failed to submit the transaction |
-| `4` | Gateway does not know this mesh sender; init is required |
-| `5` | Durable Nonce was not found, expired, or unavailable |
-| `6` | Invalid client signature |
-| `7` | Transaction was not confirmed or confirmation timed out |
-| `8` | Transaction failed on-chain |
-
----
-
-## Durable Nonce requirements
-
-The Solana transaction must use the Durable Nonce value returned by the gateway.
-
-The transaction should include:
-
-1. `nonceAdvance` as the first instruction;
-2. optional compute budget instructions;
-3. user transfer instruction;
-4. gateway service fee instruction;
-5. any cleanup or nonce lifecycle instructions required by the current implementation.
-
-Important rules:
-
-- the client signs locally;
-- the gateway must reconstruct the exact transaction;
-- the gateway must reject signatures that do not match the reconstructed transaction;
-- the transaction is not final until confirmed by Solana;
-- stale nonce state must result in an explicit error.
-
----
-
-## Session model
-
-The gateway stores a short-lived mapping:
-
-```text
-mesh_sender_id -> wallet_address -> nonce_session
-```
-
-The session may include:
-
-| Field | Description |
-|---|---|
-| `mesh_sender_id` | Meshtastic sender node ID |
-| `wallet_address` | User Solana wallet address |
-| `nonce_account` | Durable Nonce account address |
-| `nonce_value` | Durable Nonce value |
-| `server_fee_address` | Gateway fee receiver |
-| `created_at` | Session creation time |
-| `expires_at` | Session expiration time |
-
-If a transaction request arrives without a known session, the gateway returns:
-
-```text
-ST,e=4
+chunk 1 and chunk 3 are missing
 ```
 
 ---
 
-## Mesh delivery rules
+## 25. Message Type 252 — Error
 
-Recommended prototype behavior:
+Generic protocol-level error.
 
-- use a private Meshtastic channel;
-- use channel slot `7` for the current prototype;
-- keep hop limit conservative;
-- send only user-initiated messages;
-- do not continuously poll balances over mesh;
-- do not broadcast mempool-like data;
-- do not run blockchain sync over LoRa.
-
-Soltastic should respect mesh bandwidth and avoid abusing public community channels.
-
----
-
-## Security model
-
-Soltastic assumes the mesh network is unreliable and potentially adversarial.
-
-Security properties:
-
-| Property | Approach |
-|---|---|
-| User key safety | Private key never leaves the wallet |
-| Transaction integrity | Gateway verifies signature against reconstructed transaction |
-| Replay protection | Durable Nonce semantics and session validation |
-| Finality | Only Solana confirmation counts |
-| Gateway trust minimization | Gateway can relay but cannot forge user transactions |
-| Mesh safety | Compact, user-initiated messages only |
-
-The gateway can refuse, delay, or fail to submit a transaction, but it cannot create a valid transaction that the user did not sign.
-
----
-
-## Why text format is temporary
-
-Text messages are easy to debug but inefficient over LoRa.
-
-Examples:
-
-| Data | Binary size | Text size |
-|---|---:|---:|
-| Solana public key | 32 bytes | about 44 base58 chars |
-| Solana signature | 64 bytes | about 88 base58 chars |
-| 180-byte raw transaction | 180 bytes | about 240 base64 chars |
-
-This matters because LoRa payload capacity is small, and fragmentation reduces reliability.
-
-The production protocol should move to binary payloads.
-
----
-
-## Planned binary protocol
-
-The binary protocol should be sent with Meshtastic `sendData()` using a private application port.
-
-Goals:
-
-- reduce airtime;
-- reduce message size;
-- reduce fragmentation;
-- make packet parsing deterministic;
-- support versioning;
-- support future message types.
-
-### Common header
-
-Proposed common header:
+Direction:
 
 ```text
-byte 0    protocol_version
-byte 1    message_type
-byte 2    flags
-byte 3    reserved
+Client -> Server
+Server -> Client
 ```
 
-Possible message types:
-
-| Type | Name |
-|---:|---|
-| `0x01` | Init request |
-| `0x02` | Init response |
-| `0x03` | Transaction request |
-| `0x04` | Transaction result |
-| `0x05` | Error |
-| `0x06` | Chunk |
-| `0x07` | Ack |
-
----
-
-### Binary init request
+Payload:
 
 ```text
-byte 0       version
-byte 1       type = 0x01
-byte 2       flags
-byte 3       reserved
-bytes 4-35   wallet_pubkey
+request_id:  u32
+error_code:  u16
 ```
 
-Total size:
+### error_code
 
 ```text
-36 bytes
-```
-
-Compared to text:
-
-```text
-ST,init,<wallet_base58> ≈ 52 bytes
+1  = invalid_protocol_version
+2  = invalid_message_type
+3  = invalid_chunk_index
+4  = invalid_chunk_count
+5  = message_too_large
+6  = invalid_payload_length
+7  = invalid_session
+8  = unsupported_registry_version
+9  = unsupported_token
+10 = invalid_signature
+11 = durable_nonce_error
+12 = rpc_error
+13 = internal_error
 ```
 
 ---
 
-### Binary signed init request
+## 26. Message Type 253 — Ping
 
-Optional future format if signed init is required.
+Connection check.
+
+Direction:
 
 ```text
-byte 0        version
-byte 1        type = 0x01
-byte 2        flags
-byte 3        reserved
-bytes 4-35    wallet_pubkey
-bytes 36-51   client_nonce
-bytes 52-115  signature
+Client -> Server
+Server -> Client
 ```
 
-Total size:
+Payload:
 
 ```text
-116 bytes
+nonce: u32
 ```
 
 ---
 
-### Binary init response
+## 27. Message Type 254 — Pong
 
-Possible compact format:
+Response to Ping.
+
+Direction:
 
 ```text
-byte 0        version
-byte 1        type = 0x02
-byte 2        flags
-byte 3        reserved
-bytes 4-11    sol_lamports_u64
-bytes 12-19   usdc_amount_u64
-bytes 20-51   nonce_account_pubkey
-bytes 52-83   nonce_value_hash_or_pubkey
-bytes 84-115  server_fee_pubkey
+Client -> Server
+Server -> Client
 ```
 
-Note:
+Payload:
 
-The exact representation of `nonce_value` must match the transaction-building requirements. If the full nonce value is required as a 32-byte hash, it should be stored directly.
+```text
+nonce: u32
+```
+
+The `nonce` must match the received Ping nonce.
 
 ---
 
-### Binary transaction request
+## 28. Durable Nonce Mode
 
-There are two possible directions.
+In v0.1, Soltastic uses Solana Durable Nonce.
 
-#### Option A: compact transaction metadata + signature
+The server creates or assigns a durable nonce account and returns:
 
 ```text
-header
-receiver_pubkey
-token_id
-amount_u64
+dn_account
+dn_value
+```
+
+The client uses `dn_value` when building the transaction message.
+
+The client signs the transaction message locally.
+
+After receiving the signed request, the server:
+
+```text
+1. Rebuilds the exact transaction message
+2. Verifies the client signature
+3. Sends the transaction to Solana RPC
+4. Waits for confirmed or finalized status
+5. Returns Message Type 10 — Execution Result
+```
+
+---
+
+## 29. Maximum Sizes
+
+Maximum Soltastic binary frame size:
+
+```text
+170 bytes
+```
+
+Normal header size:
+
+```text
+8 bytes
+```
+
+Maximum payload per normal frame:
+
+```text
+162 bytes
+```
+
+Extended header size:
+
+```text
+9 bytes
+```
+
+Maximum payload per extended frame:
+
+```text
+161 bytes
+```
+
+Maximum number of compact chunks:
+
+```text
+8
+```
+
+Maximum number of extended chunks:
+
+```text
+16
+```
+
+Maximum compact multipart message payload:
+
+```text
+1296 bytes
+```
+
+Calculation:
+
+```text
+162 bytes * 8 chunks = 1296 bytes
+```
+
+Maximum extended multipart message payload:
+
+```text
+2576 bytes
+```
+
+Calculation:
+
+```text
+161 bytes * 16 chunks = 2576 bytes
+```
+
+If a message exceeds this limit, it must not be sent. The sender or receiver should return:
+
+```text
+message_too_large
+```
+
+---
+
+## 30. Main Flows
+
+### 30.1 Init Flow
+
+```text
+Client -> Server:
+type 1
+wallet_address
+
+Server -> Client:
+type 2
+session_id
+dn_account
+dn_value
+server_fee_wallet
+registry_version
+sol_balance
+usdc_balance
+other
+```
+
+---
+
+### 30.2 Indexed Token List Flow
+
+```text
+Client -> Server:
+type 11
+session_id
+
+Server -> Client:
+type 12
+session_id
+indexed_count
+[index u16] * indexed_count
+other_nonzero_count
+```
+
+---
+
+### 30.3 Non-Indexed Token List Flow
+
+```text
+Client -> Server:
+type 13
+session_id
+offset
+limit
+
+Server -> Client:
+type 14
+session_id
+offset
+nonindexed_count
+[mint address, decimals, ticker] * nonindexed_count
+```
+
+---
+
+### 30.4 Token Balance Flow
+
+```text
+Client -> Server:
+type 3
+session_id
+token_ref
+
+Server -> Client:
+type 4
+session_id
+token_ref
+balance
+```
+
+---
+
+### 30.5 Send Token Flow
+
+```text
+Client:
+build exact Solana transaction message
+optionally include memo
+sign locally
+
+Client -> Server:
+type 5
+session_id
+token_ref
+recipient_address
+amount
+memo_len
+memo
 signature
-```
 
-Pros:
+Server:
+rebuild exact transaction message
+verify signature
+send to RPC
+wait for confirmation
 
-- smaller payload;
-- easier to fit into one packet;
-- gateway can reconstruct exact transaction.
-
-Cons:
-
-- client and gateway must stay perfectly in sync on transaction construction rules.
-
-#### Option B: raw signed transaction chunks
-
-```text
-header
-tx_id
-chunk_index
-chunk_count
-raw_transaction_bytes
-```
-
-Pros:
-
-- gateway does not need to reconstruct as much;
-- more general;
-- supports more transaction types.
-
-Cons:
-
-- larger payload;
-- requires chunking and reassembly;
-- more packet loss risk.
-
-Recommended near-term path:
-
-1. keep metadata + signature for simple SOL / USDC transfers;
-2. add chunking later for general raw Solana transactions.
-
----
-
-## Versioning
-
-Every binary payload should include a protocol version.
-
-Recommended behavior:
-
-- reject unsupported major versions;
-- tolerate unknown optional flags;
-- include explicit error codes for unsupported message types;
-- document all breaking changes in this file.
-
----
-
-## Finality rules
-
-The client UI should clearly distinguish:
-
-| State | Meaning |
-|---|---|
-| `sent_over_mesh` | Client transmitted the message |
-| `received_by_gateway` | Gateway received or acknowledged the message |
-| `submitted_to_rpc` | Gateway submitted transaction to Solana RPC |
-| `confirmed_on_solana` | Transaction reached required confirmation |
-| `failed` | Transaction failed or timed out |
-
-Only `confirmed_on_solana` is final success.
-
----
-
-## Non-goals
-
-Soltastic protocol does not attempt to provide:
-
-- offline blockchain consensus;
-- local settlement finality;
-- proof-of-work over LoRa;
-- mining;
-- mempool broadcast;
-- general blockchain synchronization;
-- high-frequency market data transport;
-- replacement for Solana RPC;
-- replacement for Meshtastic routing.
-
----
-
-## Recommended companion docs:
-
-```text
-docs/
-├── architecture.md
-├── protocol.md
-├── quickstart.md
-└── security.md
+Server -> Client:
+type 10
+session_id
+status
+tx_signature or error_code
 ```
