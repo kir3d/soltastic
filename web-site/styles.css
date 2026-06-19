@@ -271,7 +271,7 @@ h3 {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   background:
     linear-gradient(135deg, rgba(5, 14, 18, 0.9), rgba(8, 34, 36, 0.84)),
-    url("ChatGPT Image May 11, 2026, 03_14_53 PM (1).png") center / cover fixed no-repeat;
+    url("background2.png") center / cover fixed no-repeat;
 }
 
 .section-heading {
@@ -603,6 +603,7 @@ h3 {
     flex-wrap: wrap;
   }
 }
+
 
 
 
